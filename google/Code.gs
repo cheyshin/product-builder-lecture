@@ -24,6 +24,25 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
+// ---------- 외부 페이지(Cloudflare Pages 등)용 JSON API ----------
+// 브라우저가 { fn, args } 를 text/plain 으로 POST 하면 { result } 또는 { error } 를 돌려줘요.
+// 시트에 접근하는 권한은 이 스크립트(배포한 사람 계정)만 가져요.
+// 브라우저는 이름 + PIN 로그인으로 받은 임시 토큰으로만 자기 데이터에 접근할 수 있어요.
+const API = { signup: signup, login: login, logout: logout, getData: getData, saveEntries: saveEntries, saveRules: saveRules };
+
+function doPost(e) {
+  let out;
+  try {
+    const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const fn = API[req.fn];
+    if (!fn || !API.hasOwnProperty(req.fn)) throw new Error('알 수 없는 요청이에요.');
+    out = { result: fn.apply(null, Array.isArray(req.args) ? req.args : []) };
+  } catch (err) {
+    out = { error: String((err && err.message) || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
 // ---------- 시트 읽고 쓰기 ----------
 function sheet_(name, cols) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();

@@ -1,5 +1,9 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>우리집 가계부</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* 한 열짜리 가계부: 잠금 화면 → 가져오기 → 월 요약 → 원그래프 → 내역 */
   :root {
@@ -226,21 +230,31 @@
   .toast button { color: var(--toast-link); font-weight: 600; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+  .name-input {
+    width: 100%; text-align: center; font-size: 18px; padding: 12px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+  }
+  .name-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .pin::placeholder { letter-spacing: 0; font-size: 16px; }
 </style>
+</head>
+<body>
 
-<!-- 잠금 화면 -->
+<!-- 로그인 화면 -->
 <div class="gate" id="gate">
   <div class="gate-card">
     <h1 class="gate-title">우리집 가계부</h1>
-    <p class="gate-sub" id="gate-sub">가계부를 불러오는 중이에요…</p>
+    <p class="gate-sub" id="gate-sub">불러오는 중이에요…</p>
     <form id="pin-form" hidden autocomplete="off">
-      <input id="pin1" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN 숫자 4자리">
-      <input id="pin2" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN 다시 입력" placeholder="다시 입력">
+      <input id="uname" class="name-input" type="text" maxlength="20" placeholder="이름" aria-label="이름">
+      <input id="pin1" class="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 4자리" aria-label="PIN 숫자 4자리" autocomplete="off">
+      <input id="pin2" class="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 다시 입력" aria-label="PIN 다시 입력" autocomplete="off">
       <div class="pin-err" id="pin-err" role="alert"></div>
       <button class="primary" id="pin-ok" type="submit">열기</button>
-      <button class="linkish" id="pin-forgot" type="button" hidden>PIN을 잊었어요</button>
-      <button class="linkish" id="pin-back" type="button" hidden>취소</button>
+      <button class="linkish" id="to-signup" type="button">처음이에요 · 내 가계부 만들기</button>
+      <button class="linkish" id="to-login" type="button" hidden>이미 가계부가 있어요 · 로그인</button>
     </form>
+    <button class="secondary" id="retry" type="button" hidden>다시 시도</button>
   </div>
 </div>
 
@@ -455,89 +469,110 @@
     return { cat: 'income:기타', reason: '규칙에 없음 — 확인 필요', flag: true };
   }
 
-  // ================= 저장 (claude.ai 서버) =================
-  // 각 사람의 가계부는 data/users/<본인 id>/ 아래에 저장되고, 본인만 읽고 쓸 수 있어요.
-  //   profile    : PIN, 기억한 분류
-  //   m-YYYY-MM  : 그 달의 내역
+  // ================= 저장 (내 구글 시트) =================
+  // 내역은 Google Apps Script 웹 앱(google/Code.gs)을 거쳐 내 구글 시트에 저장돼요.
+  // 바뀐 내역만 골라서 보내요.
+  //
+  // API_URL: Apps Script를 "웹 앱"으로 배포하면 나오는 주소(…/exec)를 넣어요.
+  // 이 주소는 비밀값이 아니에요. 시트 접근 권한은 Apps Script 서버만 갖고 있고,
+  // 브라우저는 이름 + PIN으로 로그인해서 받은 임시 토큰으로만 요청해요.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbytFzIXXQce3YDPebm53BEKnnb5Nm6TmJwzCKN7blWU615qvxpszv_zpXzivHa4e_UU/exec';
   const $ = id => document.getElementById(id);
   let rules = {};
   let entries = [];
-  let db = null, uid = null, profile = null;
-  const savedJSON = new Map();   // 서버에 있는 달별 내역 (변경된 달만 저장하려고)
-  const pending = new Map();
-  const running = new Set();
-  let syncError = false;
-  const monthDoc = date => 'm-' + date.slice(0, 7);
-  const colPath = () => 'data/users/' + uid;
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let token = null, userName = '';
+  let lastSaved = new Map();     // id → 서버에 저장된 내용
+  let rulesJSON = '{}';
+  let saving = false, saveAgain = false, saveTimer = null;
+  let syncError = false, needsResync = false;
+
+  // Content-Type을 text/plain으로 보내야 브라우저가 사전 요청(CORS preflight) 없이 바로 보내요.
+  // Apps Script는 preflight를 처리하지 못하기 때문이에요.
+  async function api(fn, ...args) {
+    let res;
+    try {
+      res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn, args }),
+        redirect: 'follow',
+      });
+    } catch {
+      throw new Error('서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.');
+    }
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error('서버 응답을 읽지 못했어요. Apps Script 배포 설정(액세스: 모든 사용자)을 확인해 주세요.'); }
+    if (data && data.error) throw new Error(data.error);
+    return data ? data.result : undefined;
+  }
+  const errText = e => String((e && e.message) || e || '').replace(/^Error:\s*/, '');
+  const isAuthError = e => errText(e).includes('AUTH');
 
   function save() {
-    if (!db) return;
-    const groups = new Map();
-    for (const e of entries) {
-      const k = monthDoc(e.date);
-      if (!groups.has(k)) groups.set(k, []);
-      groups.get(k).push(e);
-    }
-    for (const k of new Set([...groups.keys(), ...savedJSON.keys()])) {
-      const list = (groups.get(k) || []).map(normalizeEntry).filter(Boolean);
-      const json = JSON.stringify(list);
-      if (savedJSON.get(k) === json) continue;
-      if (list.length) { savedJSON.set(k, json); queueWrite(k, { entries: list }); }
-      else if (savedJSON.has(k)) { savedJSON.delete(k); queueWrite(k, null); }
-    }
+    if (!token) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 400);
+    showSync(true);
   }
+  function saveRules() { save(); }
 
-  function saveRules() {
-    if (!db || !profile) return;
-    profile = { ...profile, rules: { ...rules } };
-    queueWrite('profile', profile);
-  }
-
-  // 문서마다 한 번에 하나씩, 가장 최근 내용만 저장
-  function queueWrite(docId, body) {
-    pending.set(docId, body);
-    if (!running.has(docId)) flush(docId);
-    showSync();
-  }
-
-  async function flush(docId) {
-    running.add(docId);
-    showSync();
-    while (pending.has(docId)) {
-      const body = pending.get(docId);
-      pending.delete(docId);
-      const ref = db.collection(colPath()).doc(docId);
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          if (body) await ref.set(body); else await ref.delete();
-          syncError = false;
-          break;
-        } catch (err) {
-          if (err && err.code === 'unavailable' && attempt === 0) { await sleep(400 + Math.random() * 600); continue; }
-          writeFailed(err);
-          break;
+  async function flush() {
+    clearTimeout(saveTimer);
+    if (!token) return;
+    if (saving) { saveAgain = true; return; }
+    saving = true;
+    showSync(true);
+    try {
+      do {
+        saveAgain = false;
+        const cur = new Map();
+        for (const e of entries) { const n = normalizeEntry(e); if (n) cur.set(n.id, n); }
+        const upserts = [], deletes = [];
+        for (const [id, n] of cur) if (lastSaved.get(id) !== JSON.stringify(n)) upserts.push(n);
+        for (const id of lastSaved.keys()) if (!cur.has(id)) deletes.push(id);
+        if (upserts.length || deletes.length) {
+          await api('saveEntries', token, upserts, deletes);
+          for (const n of upserts) lastSaved.set(n.id, JSON.stringify(n));
+          for (const id of deletes) lastSaved.delete(id);
         }
+        const rj = JSON.stringify(rules);
+        if (rj !== rulesJSON) {
+          await api('saveRules', token, rules);
+          rulesJSON = rj;
+        }
+      } while (saveAgain);
+      syncError = false;
+    } catch (err) {
+      syncError = true;
+      if (isAuthError(err)) {
+        // 로그인 시간이 지났어요. 다시 로그인하면 못 보낸 변경을 이어서 저장해요.
+        needsResync = true;
+        token = null;
+        forgetSession();
+        showGate('login', '로그인한 지 오래되어 다시 PIN을 입력해 주세요. 저장하지 못한 변경은 로그인 후 이어서 저장해요.');
+      } else {
+        toast(errText(err) || '저장하지 못했어요. 인터넷 연결을 확인해 주세요.');
       }
+    } finally {
+      saving = false;
+      showSync();
     }
-    running.delete(docId);
-    showSync();
   }
 
-  function writeFailed(err) {
-    syncError = true;
-    const code = err && err.code;
-    toast(code === 'quota_exceeded' ? '저장 공간이 가득 찼어요. 오래된 내역을 지운 뒤 다시 시도해 주세요.'
-      : code === 'invalid_argument' ? '저장할 권한이 없어요. 가계부를 공유한 사람에게 편집자 권한을 요청해 주세요.'
-      : '저장하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
-  }
-
-  function showSync() {
+  function showSync(busy) {
     const el = $('sync');
-    const busy = running.size > 0 || pending.size > 0;
-    el.textContent = busy ? '저장 중…' : syncError ? '저장하지 못한 변경이 있어요. 인터넷 연결을 확인해 주세요.' : '모든 변경 저장됨';
-    el.classList.toggle('err', !busy && syncError);
+    const b = busy || saving;
+    el.textContent = b ? '저장 중…' : syncError ? '저장하지 못한 변경이 있어요. 인터넷 연결을 확인해 주세요.' : '모든 변경 저장됨';
+    el.classList.toggle('err', !b && syncError);
   }
+
+  // 같은 탭에서 새로 고쳐도 다시 로그인하지 않게
+  function storeSession() { try { sessionStorage.setItem('budget-token', token); } catch {} }
+  function readSession() { try { return sessionStorage.getItem('budget-token'); } catch { return null; } }
+  function forgetSession() { try { sessionStorage.removeItem('budget-token'); } catch {} }
+  function rememberName(n) { try { localStorage.setItem('budget-name', n); } catch {} }
+  function lastName() { try { return localStorage.getItem('budget-name') || ''; } catch { return ''; } }
 
   // 브라우저 기본 확인창 대신 쓰는 창
   function ask({ title, message, ok = '확인', cancel = '취소', input = null, danger = false }) {
@@ -1544,15 +1579,15 @@
   }
 
   // ================= 백업 =================
-  $('export').onclick = async () => {
-    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-    if (!dl) return toast('이 화면에서는 파일로 저장할 수 없어요.');
-    try {
-      await dl.save({ filename: `가계부-${today()}.json`, data: JSON.stringify({ version: 2, entries, rules }, null, 2) });
-      toast('백업 파일을 저장했어요');
-    } catch (err) {
-      if (!err || err.code !== 'declined') toast('파일을 저장하지 못했어요.');
-    }
+  $('export').onclick = () => {
+    const blob = new Blob([JSON.stringify({ version: 2, entries, rules }, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `가계부-${today()}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
   $('import').onclick = () => $('file').click();
   $('file').onchange = async () => {
@@ -1580,8 +1615,8 @@
     });
     if (!ok) return;
     entries.push(...add);
+    if (fileRules) rules = { ...fileRules, ...rules };
     save();
-    if (fileRules) { rules = { ...fileRules, ...rules }; saveRules(); }
     const latest = add.map(e => e.date).sort().pop();
     if (latest) [viewYear, viewMonth] = latest.split('-').map(Number);
     render();
@@ -1595,145 +1630,118 @@
     render();
   };
 
-  // ================= 잠금 · 시작 =================
-  let gateMode = 'loading', firstData = false, fails = 0, lockUntil = 0;
-  const unlockKey = () => 'budget-unlocked-' + uid;
+  // ================= 로그인 · 시작 =================
+  let gateMode = 'loading';
 
   function showGate(mode, text) {
     gateMode = mode;
     $('app').hidden = true;
     $('gate').hidden = false;
-    const isPin = mode === 'setup' || mode === 'reset' || mode === 'locked';
-    $('pin-form').hidden = !isPin;
-    $('pin2').hidden = mode === 'locked';
-    $('pin-forgot').hidden = mode !== 'locked';
-    $('pin-back').hidden = mode !== 'reset';
+    const isForm = mode === 'login' || mode === 'signup';
+    $('pin-form').hidden = !isForm;
+    $('pin2').hidden = mode !== 'signup';
+    $('to-signup').hidden = mode !== 'login';
+    $('to-login').hidden = mode !== 'signup';
+    $('retry').hidden = mode !== 'error';
     $('pin-err').textContent = '';
     $('pin1').value = $('pin2').value = '';
-    $('pin1').placeholder = mode === 'locked' ? '' : '새 PIN';
     const sub = {
-      loading: '가계부를 불러오는 중이에요…',
-      setup: '처음 오셨네요. 내 가계부를 잠글 숫자 4자리 PIN을 정해 주세요. 내 가계부는 나만 볼 수 있어요.',
-      reset: '새로 쓸 PIN 4자리를 정해 주세요. 가계부 내용은 그대로 남아요.',
-      locked: 'PIN 4자리를 입력하세요.',
+      loading: '불러오는 중이에요…',
+      login: '이름과 PIN 4자리를 입력하세요.',
+      signup: '내 가계부를 만들어요. 이름과 숫자 4자리 PIN을 정해 주세요. 내 가계부는 나만 볼 수 있어요.',
     }[mode];
     $('gate-sub').textContent = text || sub || '';
-    $('pin-ok').textContent = mode === 'locked' ? '열기' : mode === 'reset' ? '새 PIN 저장' : '가계부 만들기';
-    if (isPin) setTimeout(() => $('pin1').focus(), 0);
+    $('pin-ok').textContent = mode === 'signup' ? '가계부 만들기' : '열기';
+    if (isForm) {
+      if (!$('uname').value) $('uname').value = mode === 'login' ? (userName || lastName()) : '';
+      setTimeout(() => ($('uname').value ? $('pin1') : $('uname')).focus(), 0);
+    }
   }
 
   function showApp() {
     gateMode = 'app';
     $('gate').hidden = true;
     $('app').hidden = false;
+    showSync();
     render();
   }
 
-  async function hashPin(pin, salt) {
-    const text = salt + ':' + pin;
+  async function loadData() {
+    showGate('loading');
     try {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch {
-      let h = 2166136261;
-      for (const ch of text) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
-      return 'f' + h.toString(16);
+      const d = await api('getData', token);
+      entries = (d.entries || []).map(normalizeEntry).filter(Boolean);
+      lastSaved = new Map(entries.map(e => [e.id, JSON.stringify(e)]));
+      rules = d.rules && typeof d.rules === 'object' ? d.rules : {};
+      rulesJSON = JSON.stringify(rules);
+      userName = d.name;
+      $('app-title').textContent = `${d.name}님의 가계부`;
+      showApp();
+    } catch (err) {
+      if (isAuthError(err)) { token = null; forgetSession(); showGate('login'); }
+      else showGate('error', '가계부를 불러오지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
     }
   }
-  function isUnlocked() {
-    try { return !!profile && sessionStorage.getItem(unlockKey()) === profile.pin.hash; } catch { return false; }
-  }
-  function rememberUnlock() { try { sessionStorage.setItem(unlockKey(), profile.pin.hash); } catch {} }
-  function forgetUnlock() { try { sessionStorage.removeItem(unlockKey()); } catch {} }
 
   for (const id of ['pin1', 'pin2']) {
     $(id).addEventListener('input', () => {
       const el = $(id);
       el.value = el.value.replace(/\D/g, '').slice(0, 4);
-      if (gateMode === 'locked' && id === 'pin1' && el.value.length === 4) $('pin-form').requestSubmit();
-      if (gateMode !== 'locked' && id === 'pin1' && el.value.length === 4) $('pin2').focus();
+      if (el.value.length < 4) return;
+      if (gateMode === 'login' && $('uname').value.trim()) $('pin-form').requestSubmit();
+      else if (gateMode === 'signup' && id === 'pin1') $('pin2').focus();
     });
   }
 
   $('pin-form').onsubmit = async ev => {
     ev.preventDefault();
+    const name = $('uname').value.trim();
     const p1 = $('pin1').value, p2 = $('pin2').value;
     const err = t => { $('pin-err').textContent = t; };
-    if (!/^\d{4}$/.test(p1)) return err('숫자 4자리를 입력해 주세요.');
+    if (!name) return err('이름을 입력해 주세요.');
+    if (!/^\d{4}$/.test(p1)) return err('PIN은 숫자 4자리예요.');
+    const signup = gateMode === 'signup';
+    if (signup && p1 !== p2) { $('pin2').value = ''; return err('두 PIN이 서로 달라요. 다시 입력해 주세요.'); }
 
-    if (gateMode === 'locked') {
-      if (Date.now() < lockUntil) {
-        $('pin1').value = '';
-        return err(`${Math.ceil((lockUntil - Date.now()) / 1000)}초 후에 다시 시도해 주세요.`);
-      }
-      if (await hashPin(p1, profile.pin.salt) === profile.pin.hash) {
-        fails = 0;
-        rememberUnlock();
-        showApp();
-      } else {
-        fails++;
-        $('pin1').value = '';
-        if (fails >= 5) { fails = 0; lockUntil = Date.now() + 30000; err('5번 틀렸어요. 30초 후에 다시 시도해 주세요.'); }
-        else err(`PIN이 맞지 않아요. (${fails}/5)`);
-      }
-      return;
-    }
-
-    if (p1 !== p2) { $('pin2').value = ''; return err('두 PIN이 서로 달라요. 다시 입력해 주세요.'); }
-    const wasReset = gateMode === 'reset';
-    const salt = newId() + newId();
-    const next = { ...(profile || {}), pin: { salt, hash: await hashPin(p1, salt) }, rules: (profile && profile.rules) || {}, updatedAt: Date.now() };
     $('pin-ok').disabled = true;
+    err('');
+    let res;
     try {
-      await db.collection(colPath()).doc('profile').set(next);
-      profile = next;
-      rules = { ...next.rules };
-      rememberUnlock();
-      showApp();
-      toast(wasReset ? 'PIN을 바꿨어요' : '가계부를 만들었어요');
+      res = await api(signup ? 'signup' : 'login', name, p1);
     } catch (e) {
-      err(e && e.code === 'invalid_argument'
-        ? '저장할 권한이 없어요. 가계부를 공유한 사람에게 편집자 권한을 요청해 주세요.'
-        : '저장하지 못했어요. 인터넷 연결을 확인해 주세요.');
-    } finally {
+      $('pin1').value = $('pin2').value = '';
       $('pin-ok').disabled = false;
+      return err(errText(e) || '연결하지 못했어요. 인터넷 연결을 확인해 주세요.');
     }
+    $('pin-ok').disabled = false;
+
+    const sameUser = userName && res.name.toLowerCase() === userName.toLowerCase();
+    token = res.token;
+    storeSession();
+    rememberName(res.name);
+    if (needsResync && sameUser) { needsResync = false; await flush(); }
+    else { needsResync = false; entries = []; lastSaved = new Map(); }
+    userName = res.name;
+    await loadData();
+    if (signup && gateMode === 'app') toast('가계부를 만들었어요');
   };
 
-  $('pin-forgot').onclick = async () => {
-    const ok = await ask({ title: 'PIN 다시 정하기', message: '새 PIN을 정할까요?\n가계부 내용과 기억한 분류는 그대로 남아요.', ok: '새 PIN 정하기' });
-    if (ok) showGate('reset');
+  $('to-signup').onclick = () => { $('uname').value = ''; showGate('signup'); };
+  $('to-login').onclick = () => showGate('login');
+  $('retry').onclick = () => boot();
+
+  $('lock').onclick = async () => {
+    if (saving || saveTimer) await flush();
+    const t = token;
+    token = null;
+    forgetSession();
+    if (t) api('logout', t).catch(() => {});
+    entries = [];
+    lastSaved = new Map();
+    rules = {};
+    closePreview();
+    showGate('login');
   };
-  $('pin-back').onclick = () => showGate('locked');
-  $('lock').onclick = () => { forgetUnlock(); closePreview(); showGate('locked'); };
-
-  function onData(snap) {
-    let prof = null;
-    const months = [];
-    for (const d of snap.docs) {
-      if (d.id === 'profile') prof = d.data();
-      else if (d.id.startsWith('m-')) months.push(d);
-    }
-    if (!prof && snap.metadata.fromCache) return; // 서버 답을 기다려요
-    firstData = true;
-
-    savedJSON.clear();
-    const list = [];
-    for (const d of months) {
-      const body = d.data() || {};
-      const arr = Array.isArray(body.entries) ? body.entries.map(normalizeEntry).filter(Boolean) : [];
-      savedJSON.set(d.id, JSON.stringify(arr));
-      list.push(...arr);
-    }
-    entries = list;
-    profile = prof && prof.pin ? { ...prof } : null;
-    rules = profile && profile.rules && typeof profile.rules === 'object' ? { ...profile.rules } : {};
-
-    if (gateMode === 'app') { render(); return; }
-    if (gateMode === 'locked' || gateMode === 'reset') return;
-    if (!profile) { if (gateMode !== 'setup') showGate('setup'); return; }
-    if (isUnlocked()) showApp(); else showGate('locked');
-  }
 
   async function boot() {
     const now = new Date();
@@ -1741,35 +1749,15 @@
     viewMonth = now.getMonth() + 1;
     setSrc('card');
     resetForm();
-    showGate('loading');
-
-    const cl = window.claude;
-    if (!cl || !cl.use) return showGate('error', 'claude.ai에서 이 페이지를 열어야 가계부를 쓸 수 있어요.');
-    const [dbNs, userNs] = await Promise.all([cl.use('db'), cl.use('user')]);
-    const me = userNs ? await userNs.me() : null;
-    if (!dbNs || !me || !me.id) {
-      return showGate('error', 'claude.ai에 로그인해야 가계부를 쓸 수 있어요. 로그인한 뒤 이 페이지를 다시 열어 주세요.');
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(API_URL)) {
+      return showGate('error', '서버 주소(API_URL)가 설정되지 않았어요. 코드의 API_URL에 Apps Script 웹 앱 주소를 넣어 주세요.');
     }
-    db = dbNs;
-    uid = me.id;
-    $('app-title').textContent = me.name ? `${me.name}님의 가계부` : '내 가계부';
-
-    const timer = setTimeout(() => {
-      if (!firstData) showGate('error', '가계부를 아직 불러오지 못했어요. 인터넷 연결을 확인하고 잠시 기다려 주세요.');
-    }, 10000);
-    db.collection(colPath()).onSnapshot(
-      snap => {
-        if (!snap.metadata.fromCache) clearTimeout(timer);
-        onData(snap);
-      },
-      err => {
-        clearTimeout(timer);
-        showGate('error', err && err.code === 'revoked'
-          ? '이 가계부에 접근할 수 없어요.'
-          : '가계부를 불러오지 못했어요. 페이지를 새로 고쳐 주세요.');
-      },
-    );
+    token = readSession();
+    if (token) await loadData();
+    else showGate('login');
   }
 
   boot();
 </script>
+</body>
+</html>
