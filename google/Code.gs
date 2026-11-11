@@ -4,6 +4,7 @@
  * 이 스크립트가 붙어 있는 구글 시트에 가계부를 저장해요.
  *   users   시트: 계정 (이름, PIN 암호값, 잠금 상태, 기억한 분류)
  *   entries 시트: 모든 사람의 내역 (user 열로 구분)
+ *   assets  시트: 모든 사람의 자산 (부동산/예적금/입출금통장/주식·채권/외화/대출금)
  * PIN은 그대로 저장하지 않고 되돌릴 수 없는 암호값(SHA-256)으로만 저장해요.
  */
 
@@ -13,9 +14,18 @@ const MAX_FAILS = 5;          // PIN을 이만큼 틀리면 잠금
 
 const USERS = 'users';
 const ENTRIES = 'entries';
-const USER_COLS = ['name', 'salt', 'pinHash', 'failCount', 'lockUntil', 'lockCount', 'rules', 'createdAt'];
-const ENTRY_COLS = ['user', 'id', 'date', 'type', 'category', 'amount', 'memo', 'source', 'origAmount', 'batch'];
+const ASSETS = 'assets';
+// settings 열은 나중에 추가된 열이에요 (예전 시트에는 머리글이 자동으로 더해져요)
+const USER_COLS = ['name', 'salt', 'pinHash', 'failCount', 'lockUntil', 'lockCount', 'rules', 'createdAt', 'settings'];
+// assetId: 이 내역(저축·투자·대출상환)이 들어간 자산 / keywords: 통장 내역에서 이 자산을 알아보는 글자
+const ENTRY_COLS = ['user', 'id', 'date', 'type', 'category', 'amount', 'memo', 'source', 'origAmount', 'batch', 'assetId', 'sub'];
+const ASSET_COLS = ['user', 'id', 'category', 'name', 'amount', 'currency', 'fxAmount', 'fxRate', 'memo', 'updatedAt', 'keywords', 'rate', 'method', 'maturity'];
+// 대출 상환방식 (rate: 연 금리 %, maturity: 만기 연-월)
+const LOAN_METHODS = ['원리금균등', '원금균등', '만기일시'];
 const TYPES = ['income', 'expense', 'saving'];
+// 대출금은 빚이라 순자산에서 빼요 (금액은 양수로 저장)
+const ASSET_CATEGORIES = ['부동산', '예적금', '입출금통장', '주식·채권', '외화', '대출금'];
+const MAX_ASSETS = 300;
 
 // ---------- 화면 ----------
 function doGet() {
@@ -28,7 +38,11 @@ function doGet() {
 // 브라우저가 { fn, args } 를 text/plain 으로 POST 하면 { result } 또는 { error } 를 돌려줘요.
 // 시트에 접근하는 권한은 이 스크립트(배포한 사람 계정)만 가져요.
 // 브라우저는 이름 + PIN 로그인으로 받은 임시 토큰으로만 자기 데이터에 접근할 수 있어요.
-const API = { signup: signup, login: login, logout: logout, getData: getData, saveEntries: saveEntries, saveRules: saveRules };
+const API = {
+  signup: signup, login: login, logout: logout, getData: getData,
+  saveEntries: saveEntries, saveRules: saveRules, saveAssets: saveAssets, saveSettings: saveSettings,
+  getHousehold: getHousehold,
+};
 
 function doPost(e) {
   let out;
@@ -51,6 +65,9 @@ function sheet_(name, cols) {
     sh = ss.insertSheet(name);
     sh.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold');
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < cols.length) {
+    // 예전 버전 시트에 새 열 머리글 더하기
+    sh.getRange(1, 1, 1, cols.length).setValues([cols]).setFontWeight('bold');
   }
   return sh;
 }
@@ -131,7 +148,7 @@ function signup(name, pin) {
     if (i < 0 && rows.length >= MAX_USERS) throw new Error('더 이상 계정을 만들 수 없어요.');
     const salt = Utilities.getUuid();
     const row = [text_(name, 20), salt, hash_(salt, pin), '0', '', '0',
-      i >= 0 ? rows[i][6] : '{}', i >= 0 ? rows[i][7] : new Date().toISOString()];
+      i >= 0 ? rows[i][6] : '{}', i >= 0 ? rows[i][7] : new Date().toISOString(), i >= 0 ? rows[i][8] : '{}'];
     if (i >= 0) { row[0] = rows[i][0]; rows[i] = row; } else rows.push(row);
     writeAll_(sh, USER_COLS, rows);
     return session_(String(row[0]));
@@ -187,22 +204,80 @@ function getData(token) {
   const name = auth_(token);
   const users = readAll_(sheet_(USERS, USER_COLS), USER_COLS);
   const u = users.find(r => norm_(r[0]) === norm_(name));
-  let rules = {};
+  let rules = {}, settings = {};
   try { rules = JSON.parse((u && u[6]) || '{}') || {}; } catch (e) { rules = {}; }
+  try { settings = JSON.parse((u && u[8]) || '{}') || {}; } catch (e) { settings = {}; }
 
   const entries = readAll_(sheet_(ENTRIES, ENTRY_COLS), ENTRY_COLS)
-    .filter(r => norm_(r[0]) === norm_(name))
-    .map(r => {
-      const e = {
-        id: String(r[1]), date: dateText_(r[2]), type: String(r[3]), category: String(r[4]),
-        amount: Number(r[5]), memo: String(r[6] || ''),
-      };
-      if (r[7]) e.source = String(r[7]);
-      if (Number(r[8]) > 0) e.origAmount = Number(r[8]);
-      if (r[9]) e.batch = String(r[9]);
-      return e;
+    .filter(r => norm_(r[0]) === norm_(name)).map(entryObj_);
+  const assets = readAll_(sheet_(ASSETS, ASSET_COLS), ASSET_COLS)
+    .filter(r => norm_(r[0]) === norm_(name)).map(assetObj_);
+  return { name: name, entries: entries, rules: rules, assets: assets, settings: settings };
+}
+
+// 시트 한 줄 → 내역
+function entryObj_(r) {
+  const e = {
+    id: String(r[1]), date: dateText_(r[2]), type: String(r[3]), category: String(r[4]),
+    amount: Number(r[5]), memo: String(r[6] || ''),
+  };
+  if (r[7]) e.source = String(r[7]);
+  if (Number(r[8]) > 0) e.origAmount = Number(r[8]);
+  if (r[9]) e.batch = String(r[9]);
+  if (r[10]) e.assetId = String(r[10]);
+  if (r[11]) e.sub = String(r[11]); // 세부항목 (예: 교통비 → 주유비)
+  return e;
+}
+
+// 시트 한 줄 → 자산
+function assetObj_(r) {
+  const a = {
+    id: String(r[1]), category: String(r[2]), name: String(r[3] || ''), amount: Number(r[4]) || 0,
+    memo: String(r[8] || ''), updatedAt: dateText_(r[9]), keywords: String(r[10] || ''),
+  };
+  if (Number(r[11]) > 0) a.rate = Number(r[11]);
+  if (LOAN_METHODS.indexOf(String(r[12])) >= 0) a.method = String(r[12]);
+  const mat = r[13] instanceof Date ? Utilities.formatDate(r[13], Session.getScriptTimeZone(), 'yyyy-MM') : String(r[13] || '');
+  if (/^\d{4}-\d{2}$/.test(mat)) a.maturity = mat;
+  if (r[5]) a.currency = String(r[5]);
+  if (Number(r[6]) > 0) a.fxAmount = Number(r[6]);
+  if (Number(r[7]) > 0) a.fxRate = Number(r[7]);
+  return a;
+}
+
+// ---------- 함께 보기 (가족 합계) ----------
+// 각자 설정의 shareWith 에 상대 이름을 넣은 경우에만, 상대가 내 내역·자산을 "읽기 전용"으로 볼 수 있어요.
+// 서로 넣으면 두 사람 모두 합계를 봐요. 고치는 건 언제나 본인 것만 가능해요.
+function settingsOf_(row) {
+  try { return JSON.parse((row && row[8]) || '{}') || {}; } catch (e) { return {}; }
+}
+
+function getHousehold(token) {
+  const name = auth_(token);
+  const me = norm_(name);
+  const users = readAll_(sheet_(USERS, USER_COLS), USER_COLS);
+  const mine = settingsOf_(users.find(r => norm_(r[0]) === me));
+  const partners = users.filter(r => {
+    if (norm_(r[0]) === me) return false;
+    const list = settingsOf_(r).shareWith;
+    return Array.isArray(list) && list.some(n => norm_(n) === me);
+  }).map(r => String(r[0]));
+  const wanted = new Set(partners.map(norm_));
+  const byUser = {};
+  partners.forEach(p => { byUser[norm_(p)] = { name: p, entries: [], assets: [] }; });
+  if (partners.length) {
+    readAll_(sheet_(ENTRIES, ENTRY_COLS), ENTRY_COLS).forEach(r => {
+      if (wanted.has(norm_(r[0]))) byUser[norm_(r[0])].entries.push(entryObj_(r));
     });
-  return { name: name, entries: entries, rules: rules };
+    readAll_(sheet_(ASSETS, ASSET_COLS), ASSET_COLS).forEach(r => {
+      if (wanted.has(norm_(r[0]))) byUser[norm_(r[0])].assets.push(assetObj_(r));
+    });
+  }
+  return {
+    name: name,
+    shareWith: Array.isArray(mine.shareWith) ? mine.shareWith : [],
+    partners: partners.map(p => byUser[norm_(p)]),
+  };
 }
 
 function entryRow_(name, e) {
@@ -213,7 +288,8 @@ function entryRow_(name, e) {
   return [
     text_(name, 20), text_(e.id, 40), String(e.date), e.type, text_(e.category, 20), amount,
     text_(e.memo, 200), text_(e.source || '', 10), Number(e.origAmount) > 0 ? Math.round(Number(e.origAmount)) : '',
-    text_(e.batch || '', 40),
+    text_(e.batch || '', 40), e.type === 'saving' ? text_(e.assetId || '', 40) : '',
+    text_(e.sub || '', 20),
   ];
 }
 
@@ -236,6 +312,83 @@ function saveEntries(token, upserts, deleteIds) {
     // 날짜순으로 정리해 두면 시트에서 보기 편해요
     kept.sort((a, b) => String(a[2]).localeCompare(String(b[2])) || norm_(a[0]).localeCompare(norm_(b[0])));
     writeAll_(sh, ENTRY_COLS, kept, [5, 8]);
+    return true;
+  });
+}
+
+// ---------- 자산 ----------
+function assetRow_(name, a) {
+  if (!a || ASSET_CATEGORIES.indexOf(a.category) < 0) throw new Error('잘못된 자산 분류가 있어요.');
+  if (!String(a.name || '').trim()) throw new Error('자산 이름을 입력해 주세요.');
+  const amount = Math.round(Number(a.amount));
+  if (!(amount >= 0)) throw new Error('잘못된 자산 금액이 있어요.');
+  const fx = Number(a.fxAmount), rate = Number(a.fxRate);
+  const loan = a.category === '대출금';
+  return [
+    text_(name, 20), text_(a.id, 40), a.category, text_(a.name, 40), amount,
+    text_(a.currency || '', 10), fx > 0 ? fx : '', rate > 0 ? rate : '',
+    text_(a.memo, 200), /^\d{4}-\d{2}-\d{2}$/.test(String(a.updatedAt)) ? String(a.updatedAt) : dateText_(new Date()),
+    text_(a.keywords || '', 100),
+    loan && Number(a.rate) > 0 && Number(a.rate) < 100 ? Number(a.rate) : '',
+    loan && LOAN_METHODS.indexOf(a.method) >= 0 ? a.method : '',
+    loan && /^\d{4}-\d{2}$/.test(String(a.maturity)) ? String(a.maturity) : '',
+  ];
+}
+
+// upserts: 새로 생기거나 바뀐 자산, deleteIds: 지운 자산의 id
+function saveAssets(token, upserts, deleteIds) {
+  const name = auth_(token);
+  const newRows = (upserts || []).map(a => assetRow_(name, a));
+  const del = new Set((deleteIds || []).map(String));
+  return withLock_(() => {
+    const sh = sheet_(ASSETS, ASSET_COLS);
+    const rows = readAll_(sh, ASSET_COLS);
+    const mine = new Map();
+    rows.forEach((r, i) => { if (norm_(r[0]) === norm_(name)) mine.set(String(r[1]), i); });
+    for (const row of newRows) {
+      const i = mine.get(String(row[1]));
+      if (i === undefined) { mine.set(String(row[1]), rows.length); rows.push(row); }
+      else rows[i] = row;
+    }
+    const kept = rows.filter(r => !(norm_(r[0]) === norm_(name) && del.has(String(r[1]))));
+    if (kept.filter(r => norm_(r[0]) === norm_(name)).length > MAX_ASSETS) throw new Error('자산은 ' + MAX_ASSETS + '개까지 저장할 수 있어요.');
+    // 사람별 → 분류 순서대로 정리
+    kept.sort((a, b) => norm_(a[0]).localeCompare(norm_(b[0]))
+      || ASSET_CATEGORIES.indexOf(a[2]) - ASSET_CATEGORIES.indexOf(b[2])
+      || String(a[3]).localeCompare(String(b[3])));
+    writeAll_(sh, ASSET_COLS, kept, [4]);
+    return true;
+  });
+}
+
+// ---------- 설정 ----------
+// ownNames: 통장 내역에서 이 이름이 보이면 내 통장끼리 옮긴 돈으로 보고 가계부에서 빼요
+function saveSettings(token, settings) {
+  const name = auth_(token);
+  const s = settings && typeof settings === 'object' ? settings : {};
+  const clean = {
+    ownNames: (Array.isArray(s.ownNames) ? s.ownNames : [])
+      .map(n => String(n || '').trim().slice(0, 20)).filter(Boolean).slice(0, 10),
+    // history: { 'YYYY-MM': [총자산, 부채] } — 순자산 추이 그래프용, 최근 120개월
+    history: {},
+    // shareWith: 내 가계부를 읽기 전용으로 함께 볼 수 있는 사람 (계정 이름)
+    shareWith: (Array.isArray(s.shareWith) ? s.shareWith : [])
+      .map(n => String(n || '').trim().slice(0, 20)).filter(n => n && norm_(n) !== norm_(name)).slice(0, MAX_USERS),
+  };
+  const h = s.history && typeof s.history === 'object' ? s.history : {};
+  Object.keys(h).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().slice(-120).forEach(k => {
+    const v = h[k];
+    if (Array.isArray(v) && v.length === 2 && v.every(x => isFinite(Number(x)) && Number(x) >= 0)) {
+      clean.history[k] = [Math.round(Number(v[0])), Math.round(Number(v[1]))];
+    }
+  });
+  return withLock_(() => {
+    const sh = sheet_(USERS, USER_COLS);
+    const rows = readAll_(sh, USER_COLS);
+    const i = rows.findIndex(r => norm_(r[0]) === norm_(name));
+    if (i < 0) throw new Error('AUTH');
+    rows[i][8] = text_(JSON.stringify(clean), 20000);
+    writeAll_(sh, USER_COLS, rows);
     return true;
   });
 }

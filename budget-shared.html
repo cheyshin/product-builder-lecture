@@ -14,6 +14,7 @@
     /* 카테고리 색 (순서 고정) */
     --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
     --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+    --s9: #0f8b8d; --s10: #a0522d; --s11: #5f6b7a;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -23,6 +24,7 @@
       --toast-bg: #ededf0; --toast-fg: #111113; --toast-link: #2f5fd0; --scrim: rgba(0, 0, 0, .6);
       --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
       --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+      --s9: #2bb3b5; --s10: #c77b4d; --s11: #8b97a6;
       color-scheme: dark;
     }
   }
@@ -33,6 +35,7 @@
     --toast-bg: #ededf0; --toast-fg: #111113; --toast-link: #2f5fd0; --scrim: rgba(0, 0, 0, .6);
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
     --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --s9: #2bb3b5; --s10: #c77b4d; --s11: #8b97a6;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -173,6 +176,10 @@
   .bar div { height: 100%; border-radius: 4px; }
   .bar.expense div { background: var(--expense); }
   .bar.saving div { background: var(--saving); }
+  .bar.income div { background: var(--income); }
+  .cat-toggle { display: block; width: 100%; text-align: left; padding: 6px; border-radius: 8px; }
+  .cat-toggle:hover { background: var(--bar-bg); }
+  .cat-toggle .chev { display: inline-block; margin-right: 4px; }
   #cats h3:first-child { margin-top: 0; }
 
   /* 원그래프 */
@@ -199,6 +206,9 @@
   .cat-items .idate { color: var(--muted); width: 40px; flex-shrink: 0; }
   .cat-items .imemo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cat-items .iamt { white-space: nowrap; }
+  .sub-groups { margin: 2px 0 8px 22px; }
+  .sub-groups .cat-items { margin-left: 8px; }
+  .sub-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; padding: 6px 8px 2px; }
 
   /* 내역 */
   .day { margin-bottom: 12px; }
@@ -236,6 +246,78 @@
   }
   .name-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .pin::placeholder { letter-spacing: 0; font-size: 16px; }
+
+  /* 가계부 / 자산 탭 */
+  .view-tabs { margin-bottom: 16px; }
+  .type-toggle button.active[data-view] { color: var(--accent); }
+
+  /* 본인 이름 (통장 내역) */
+  .own-box { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+  .own-box input { padding: 8px 10px; font-size: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  .own-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  /* 자산 */
+  .summary.three { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 520px) {
+    .summary.three { grid-template-columns: 1fr 1fr; }
+    .summary.three .card:last-child { grid-column: 1 / -1; }
+  }
+  .field.full { grid-column: 1 / -1; }
+  .asset-legend { flex: 1; min-width: 240px; list-style: none; margin: 0; padding: 0; }
+  .asset-legend li { display: flex; align-items: center; gap: 8px; padding: 7px 6px; font-size: 14px; border-radius: 8px; }
+  .asset-legend li.active { background: var(--bar-bg); }
+
+  /* 함께 보기 */
+  .people { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 4px 12px; font-size: 13px; color: var(--muted); }
+  .people span { display: inline-flex; align-items: center; gap: 6px; }
+  .who { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .who div { display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who .dot, .people .dot { width: 8px; height: 8px; border-radius: 2px; }
+  .section-title { font-size: 16px; margin: 24px 4px 12px; }
+  .muted-note { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .hrow { margin-bottom: 12px; }
+  .hrow-head { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 4px; }
+  .hrow-head b { font-weight: 600; }
+  .hbar { display: flex; gap: 2px; height: 10px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
+  .hbar div { height: 100%; min-width: 2px; }
+  .hbar div:last-child { border-radius: 0 4px 4px 0; }
+  .hrow-who { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .share-status { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+  .share-status li { padding: 4px 0; }
+
+  /* 대출 상환 예상 */
+  .loan-list { list-style: none; margin: 0; padding: 0; }
+  .loan-list > li { padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; }
+  .loan-list > li:first-child { border-top: none; padding-top: 0; }
+  .loan-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+  .loan-sub { font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+  .loan-break { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .loan-break div { background: var(--bar-bg); border-radius: 8px; padding: 8px; }
+  .loan-break .k { font-size: 12px; color: var(--muted); }
+  .loan-break .v { font-weight: 700; margin-top: 2px; word-break: break-all; }
+  .loan-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .loan-total { display: flex; justify-content: space-between; font-weight: 700; padding-top: 10px; border-top: 1px solid var(--border); font-size: 15px; }
+
+  /* 순자산 추이 */
+  .trend { position: relative; }
+  .trend svg { display: block; width: 100%; overflow: visible; }
+  .trend .grid-line { stroke: var(--border); stroke-width: 1; }
+  .trend .zero-line { stroke: var(--muted); stroke-width: 1; }
+  .trend .axis { fill: var(--muted); font-size: 11px; }
+  .trend .col { fill: var(--accent); pointer-events: none; }
+  .trend .col.neg { fill: var(--expense); }
+  .trend .hit { fill: transparent; cursor: pointer; }
+  .trend .hit:hover + .col, .trend .col.active { opacity: .75; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.6; box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    white-space: nowrap; transform: translate(-50%, -100%); z-index: 5;
+  }
+  .tip b { font-size: 13px; }
+  .debt-line { display: flex; justify-content: space-between; font-size: 14px; padding: 10px 6px 0; margin-top: 6px; border-top: 1px solid var(--border); }
+  .aname { flex: 1; min-width: 0; }
+  .aname div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .aname .asub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -265,6 +347,13 @@
   </header>
   <p class="sync" id="sync">모든 변경 저장됨</p>
 
+  <div class="type-toggle view-tabs" id="view-tabs">
+    <button type="button" data-view="ledger">가계부</button>
+    <button type="button" data-view="assets">자산 현황</button>
+    <button type="button" data-view="household">함께 보기</button>
+  </div>
+
+  <div id="ledger-view">
   <!-- 내역 가져오기 -->
   <section class="card">
     <h2>내역 가져오기</h2>
@@ -273,6 +362,10 @@
       <button type="button" data-src="bank">통장 입출금내역</button>
     </div>
     <p class="help" id="src-help"></p>
+    <label class="own-box" id="own-box" hidden>
+      내 이름 (예금주) — 통장 내역에 이 이름이 있으면 내 통장끼리 옮긴 돈이라 가계부에서 빼요. 여러 개는 쉼표로 구분해요.
+      <input id="own-names" type="text" maxlength="120" placeholder="예: 홍길동, 홍길동(적금)" autocomplete="off">
+    </label>
     <textarea id="paste" placeholder="여기에 붙여넣기 (Ctrl+V)"></textarea>
     <div class="actions">
       <button class="primary" id="analyze" type="button">자동 분류하기</button>
@@ -318,6 +411,7 @@
         <div class="field"><input id="amount" type="number" inputmode="numeric" min="1" step="1" placeholder="금액 (원)" required></div>
         <div class="field"><select id="category"></select></div>
         <div class="field"><input id="memo" type="text" placeholder="메모 (선택)" autocomplete="off"></div>
+        <div class="field full" id="link-field" hidden><select id="link-asset" aria-label="연결할 자산"></select></div>
       </div>
       <div class="actions">
         <button class="primary" id="submit" type="submit">추가</button>
@@ -357,6 +451,116 @@
     <button id="import" type="button">백업 파일 가져오기</button>
     <input id="file" type="file" accept="application/json,.json" hidden>
   </div>
+  </div>
+
+  <!-- 자산 현황 -->
+  <div id="asset-view" hidden>
+    <div class="summary three">
+      <div class="card"><div class="label">총자산</div><div class="value saving" id="asset-total"></div></div>
+      <div class="card"><div class="label">부채 (대출금)</div><div class="value expense" id="asset-debt"></div></div>
+      <div class="card"><div class="label">순자산</div><div class="value" id="asset-net"></div></div>
+    </div>
+
+    <section class="card" id="asset-mix-card" hidden>
+      <h2>자산 구성</h2>
+      <div class="donut-wrap">
+        <div class="donut-box" id="asset-donut"></div>
+        <ul class="asset-legend" id="asset-legend"></ul>
+      </div>
+    </section>
+
+    <section class="card" id="loan-card" hidden>
+      <h2 id="loan-title">이번 달 대출 상환 예상</h2>
+      <p class="help">지금 남은 대출금과 연 금리로 계산한 예상 금액이에요 (연 금리 ÷ 12). 은행은 날짜 수로 이자를 계산해서 실제 금액과 조금 다를 수 있어요.</p>
+      <ul class="loan-list" id="loan-list"></ul>
+    </section>
+
+    <section class="card" id="trend-card" hidden>
+      <h2>순자산 추이</h2>
+      <p class="help" id="trend-help"></p>
+      <div class="trend" id="trend"></div>
+    </section>
+
+    <details class="card" id="asset-form-box">
+      <summary id="asset-form-title">자산 추가</summary>
+      <form id="asset-form">
+        <div class="grid">
+          <div class="field"><select id="a-category" aria-label="자산 분류"></select></div>
+          <div class="field"><input id="a-name" type="text" maxlength="40" placeholder="이름 (예: 국민은행 정기예금)" required autocomplete="off"></div>
+          <div class="field fx-only"><select id="a-currency" aria-label="통화">
+            <option value="USD">USD 미국 달러</option><option value="JPY">JPY 일본 엔</option>
+            <option value="EUR">EUR 유로</option><option value="CNY">CNY 중국 위안</option>
+            <option value="GBP">GBP 영국 파운드</option><option value="기타">기타</option>
+          </select></div>
+          <div class="field fx-only"><input id="a-fx" type="number" inputmode="decimal" min="0" step="any" placeholder="외화 금액"></div>
+          <div class="field fx-only"><input id="a-rate" type="number" inputmode="decimal" min="0" step="any" placeholder="환율 (1단위당 원)"></div>
+          <div class="field"><input id="a-amount" type="number" inputmode="numeric" min="0" step="1" placeholder="평가금액 (원)" required></div>
+          <div class="field loan-only"><input id="a-loan-rate" type="number" inputmode="decimal" min="0" max="99" step="0.01" placeholder="연 금리 (%) 예: 4.2"></div>
+          <div class="field loan-only"><select id="a-method" aria-label="상환방식">
+            <option value="원리금균등">원리금균등 (매달 같은 금액)</option>
+            <option value="원금균등">원금균등 (원금을 똑같이)</option>
+            <option value="만기일시">만기일시 (이자만 내다가 만기에 원금)</option>
+          </select></div>
+          <div class="field loan-only"><input id="a-maturity" type="month" aria-label="만기 (연-월)" title="만기 (연-월)"></div>
+          <div class="field full"><input id="a-keywords" type="text" maxlength="100" placeholder="통장 내역 키워드 (선택) 예: IRP, 청약, 주택담보" autocomplete="off"></div>
+          <div class="field full"><input id="a-memo" type="text" maxlength="200" placeholder="메모 (선택) 예: 만기 2027-03, 금리 3.5%" autocomplete="off"></div>
+        </div>
+        <p class="help" id="a-hint" style="margin-top:10px"></p>
+        <div class="actions">
+          <button class="primary" id="a-submit" type="submit">추가</button>
+          <button class="secondary" id="a-cancel" type="button" hidden>취소</button>
+        </div>
+      </form>
+    </details>
+
+    <section id="asset-groups"></section>
+  </div>
+
+  <!-- 함께 보기: 공유해 준 사람의 가계부를 내 것과 합쳐서 (읽기 전용) -->
+  <div id="household-view" hidden>
+    <div class="month-nav">
+      <button id="h-prev" aria-label="이전 달">◀</button>
+      <span id="h-month"></span>
+      <button id="h-next" aria-label="다음 달">▶</button>
+    </div>
+    <p class="sync" id="h-status"></p>
+
+    <div id="h-content" hidden>
+      <div class="people" id="h-people"></div>
+      <div class="summary">
+        <div class="card"><div class="label">수입</div><div class="value income" id="h-income"></div><div class="who" id="h-income-who"></div></div>
+        <div class="card"><div class="label">지출</div><div class="value expense" id="h-expense"></div><div class="who" id="h-expense-who"></div></div>
+        <div class="card"><div class="label">저축·투자</div><div class="value saving" id="h-saving"></div><div class="who" id="h-saving-who"></div></div>
+        <div class="card"><div class="label">남은 돈</div><div class="value" id="h-balance"></div><div class="who" id="h-balance-who"></div></div>
+      </div>
+
+      <section class="card" id="h-cat-card">
+        <h2>카테고리별 지출 (합계)</h2>
+        <div id="h-cats"></div>
+      </section>
+
+      <h2 class="section-title">합친 자산 현황 <span class="muted-note">(지금 기준)</span></h2>
+      <div class="summary three">
+        <div class="card"><div class="label">총자산</div><div class="value saving" id="h-asset-total"></div><div class="who" id="h-asset-total-who"></div></div>
+        <div class="card"><div class="label">부채 (대출금)</div><div class="value expense" id="h-asset-debt"></div><div class="who" id="h-asset-debt-who"></div></div>
+        <div class="card"><div class="label">순자산</div><div class="value" id="h-asset-net"></div><div class="who" id="h-asset-net-who"></div></div>
+      </div>
+      <section class="card" id="h-asset-card">
+        <h2>분류별 자산 (합계)</h2>
+        <div id="h-assets"></div>
+      </section>
+    </div>
+
+    <details class="card" id="share-box">
+      <summary>함께 보기 설정</summary>
+      <p class="help">내 가계부를 보여줄 사람의 <b>계정 이름</b>을 적어 주세요. 그 사람은 내 내역과 자산을 <b>볼 수만 있고 고칠 수는 없어요.</b> 두 사람이 서로 이름을 넣으면 둘 다 합계를 볼 수 있어요. 지우면 바로 보이지 않게 돼요.</p>
+      <label class="own-box">
+        내 가계부를 보여줄 사람 (여러 명은 쉼표로)
+        <input id="share-names" type="text" maxlength="80" placeholder="예: 김영희" autocomplete="off">
+      </label>
+      <ul class="share-status" id="share-status"></ul>
+    </details>
+  </div>
 </main>
 
 <div class="dlg-back" id="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="dlg-title">
@@ -378,17 +582,74 @@
   const KEY = 'budget';
   const RULES_KEY = 'budget-rules';
   const CATEGORIES = {
-    expense: ['식비', '교통비', '의류비', '화장품', '운동비', '학습비', '공과금', '생활비'],
-    income: ['월급', '용돈', '부수입', '이자', '기타'],
-    saving: ['저축', '투자'],
+    expense: ['식비', '교통비', '의류비', '화장품', '운동비', '학습비', '공과금', '여행비', '대출이자', '업무 관련', '생활비'],
+    // 잡수입은 맨 끝 — 분류가 없는 수입이 모이는 곳
+    income: ['월급', '상여금', '부수입', '출장비', '배당금', '이자', '환급금', '용돈', '잡수입'],
+    saving: ['저축', '대출상환', '투자'],
   };
   const TYPE_LABEL = { expense: '지출', income: '수입', saving: '저축·투자' };
+  // 세부항목이 있는 카테고리 — 마지막 항목은 나머지가 모이는 곳
+  const SUBCATS = {
+    '식비': ['마트', '편의점', '식당', '카페', '배달', '기타 식비'],
+    '교통비': ['주유비', '주차비', '하이패스', '대중교통', '기타 교통'],
+  };
+  // 자산 분류 — 대출금은 빚이라 순자산에서 빼요
+  const ASSET_CATEGORIES = ['부동산', '예적금', '입출금통장', '주식·채권', '외화', '대출금'];
+  // 순서대로 이웃한 색끼리 색각이상이 있어도 구분되도록 검증한 순서 (주황·노랑을 떨어뜨림)
+  const ASSET_COLOR = {
+    '부동산': 'var(--s1)', '예적금': 'var(--s2)', '입출금통장': 'var(--s3)',
+    '주식·채권': 'var(--s7)', '외화': 'var(--s4)', '대출금': 'var(--expense)',
+  };
+  const ASSET_HINT = {
+    '부동산': '집·토지 등의 현재 시세(또는 공시가격)를 적어요. 전세보증금도 여기에 넣으면 돼요.',
+    '예적금': '정기예금·적금·청약 등의 현재 잔액이에요.',
+    '입출금통장': '자유롭게 넣고 빼는 통장(파킹통장·CMA 포함)의 현재 잔액이에요.',
+    '주식·채권': '주식·ETF·펀드·채권·연금 계좌의 현재 평가금액이에요.',
+    '외화': '외화 금액과 환율을 넣으면 원화 평가금액을 자동으로 계산해요.',
+    '대출금': '남은 대출 원금이에요. 순자산에서 빠져요.',
+  };
+  const LOAN_METHODS = ['원리금균등', '원금균등', '만기일시'];
+  const MONTH_RE = /^\d{4}-\d{2}$/;
+  const KEYWORD_HINT = ' 통장 내역 키워드를 적어 두면, 통장 내역을 가져올 때 이 글자가 있는 이체를 자동으로 연결해서 금액에 반영해요.';
   const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
   // ================= 자동 분류 규칙 =================
-  const FOOD = /식당|음식|카페|커피|cafe|coffee|스타벅스|starbucks|이디야|투썸|메가커피|메가엠지씨|메가mgc|컴포즈|빽다방|폴바셋|할리스|탐앤탐스|공차|베이커리|제과|빵|파리바게|뚜레쥬르|던킨|배달의|배민|요기요|쿠팡이츠|땡겨요|맥도날드|버거|롯데리아|맘스터치|kfc|서브웨이|치킨|bhc|bbq|교촌|굽네|피자|김밥|분식|떡볶이|국밥|국수|냉면|칼국수|순대|해장|고기|갈비|삼겹|정육|한우|곱창|막창|횟집|수산|초밥|스시|라멘|우동|돈까스|돈가스|마라|훠궈|짬뽕|중화|반점|쌀국수|족발|보쌈|도시락|한솥|본죽|샐러드|레스토랑|비스트로|다이닝|주점|호프|포차|이자카야|술집|편의점|gs25|씨유|(^|[^a-z])cu([^a-z]|$)|세븐일레븐|7-?eleven|이마트24|미니스톱|이마트|홈플러스|롯데마트|하나로마트|(?<!스)마트|노브랜드|컬리|오아시스마켓|청과|과일|반찬|푸드|식품|떡/i;
+  const CAFE = /카페|커피|cafe|coffee|스타벅스|starbucks|이디야|투썸|메가커피|메가엠지씨|메가mgc|컴포즈|빽다방|폴바셋|할리스|탐앤탐스|공차|베이커리|제과|빵|파리바게|뚜레쥬르|던킨|배스킨|설빙/i;
+  const DELIVERY = /배달의|배민|요기요|쿠팡이츠|땡겨요/i;
+  const CONV = /편의점|gs25|씨유|(^|[^a-z])cu([^a-z]|$)|세븐일레븐|7-?eleven|이마트24|emart24|미니스톱/i;
+  const MART = /이마트|홈플러스|롯데마트|하나로마트|(?<!스)마트|노브랜드|컬리|오아시스마켓|코스트코|트레이더스|청과|과일|반찬|정육|식자재|식품/i;
+  const RESTAURANT = /식당|음식|맥도날드|버거|롯데리아|맘스터치|kfc|서브웨이|치킨|bhc|bbq|교촌|굽네|피자|김밥|분식|떡볶이|국밥|국수|냉면|칼국수|순대|해장|고기|갈비|삼겹|한우|곱창|막창|횟집|수산|초밥|스시|라멘|우동|돈까스|돈가스|마라|훠궈|짬뽕|중화|반점|쌀국수|족발|보쌈|도시락|한솥|본죽|샐러드|레스토랑|비스트로|다이닝|주점|호프|포차|이자카야|술집/i;
+  const FOOD_ETC = /푸드|떡/i;
+  const FOOD = new RegExp([CAFE, DELIVERY, CONV, MART, RESTAURANT, FOOD_ETC].map(r => r.source).join('|'), 'i');
   const UTIL = /한국전력|한전|전기요금|도시가스|가스공사|가스요금|수도요금|상하수도|수도사업|관리비|월세|skt|sk텔레콤|에스케이텔레콤|(^|[^a-z])kt([^a-z]|$)|케이티|lg ?유플러스|lgu\+|유플러스|알뜰폰|헬로모바일|브로드밴드|딜라이브|인터넷요금|통신요금|통신비|휴대폰요금|보험|국민연금|건강보험|국민건강|지방세|국세|자동차세|재산세|주민세|위택스|수신료/i;
-  const TRANSPORT = /교통|버스|지하철|철도|코레일|korail|srt|ktx|택시|카카오t|카카오모빌리티|우티|uber|타다|티머니|tmoney|캐시비|cashbee|주유|sk에너지|gs칼텍스|s-?oil|에쓰오일|오일뱅크|충전소|전기차충전|주차|하이패스|톨게이트|도로공사|쏘카|그린카|따릉이|킥보드|항공|대한항공|아시아나|진에어|티웨이|에어부산|렌터카|렌트카/i;
+  const FUEL = /주유|sk에너지|gs칼텍스|s-?oil|에쓰오일|오일뱅크|현대오일|알뜰주유|충전소|전기차충전|lpg|엘피지/i;
+  const PARKING = /주차|parking/i;
+  const HIPASS = /하이패스|hi-?pass|톨게이트|도로공사|통행료/i;
+  const TRANSIT = /교통카드|후불교통|버스|지하철|도시철도|메트로|철도|코레일|korail|srt|ktx|티머니|tmoney|캐시비|cashbee|기후동행|k-?패스|레일플러스/i;
+  const TRANSPORT_ETC = /교통|택시|카카오t|카카오모빌리티|우티|uber|타다|쏘카|그린카|따릉이|킥보드|세차|카센터|자동차정비/i;
+  const TRANSPORT = new RegExp([FUEL, PARKING, HIPASS, TRANSIT, TRANSPORT_ETC].map(r => r.source).join('|'), 'i');
+  const SUB_RULES = {
+    // 위에서부터 먼저 맞는 것 (이마트24 → 편의점, 이마트 안 스타벅스 → 카페)
+    '식비': [['편의점', CONV], ['배달', DELIVERY], ['카페', CAFE], ['마트', MART], ['식당', RESTAURANT]],
+    '교통비': [['주유비', FUEL], ['주차비', PARKING], ['하이패스', HIPASS], ['대중교통', TRANSIT]],
+  };
+  // 내용으로 세부항목 추측 (맞는 게 없으면 마지막 "기타 교통")
+  function guessSub(category, memo) {
+    const subs = SUBCATS[category];
+    if (!subs) return '';
+    for (const [sub, re] of SUB_RULES[category] || []) if (re.test(memo || '')) return sub;
+    return subs[subs.length - 1];
+  }
+  // 'expense:교통비' → 'expense:교통비:주유비' 처럼 세부항목까지 채우기
+  function fullCat(cat, memo) {
+    const [t, c, sub] = String(cat).split(':');
+    if (!SUBCATS[c]) return cat;
+    return `${t}:${c}:${SUBCATS[c].includes(sub) ? sub : guessSub(c, memo)}`;
+  }
+  const catLabel = cat => { const [, c, sub] = String(cat).split(':'); return sub || c; };
+  const TRAVEL = /여행|호텔|hotel|모텔|숙박|리조트|resort|펜션|게스트하우스|에어비앤비|airbnb|야놀자|여기어때|아고다|agoda|부킹닷컴|booking\.com|익스피디아|expedia|트립닷컴|trip\.com|호텔스닷컴|하나투어|모두투어|노랑풍선|참좋은여행|인터파크투어|마이리얼트립|클룩|klook|kkday|면세점|duty ?free|항공|대한항공|아시아나|진에어|티웨이|에어부산|제주항공|에어서울|이스타|렌터카|렌트카/i;
+  const LOAN_INT = /대출이자|대출금이자|이자상환|이자납입|이자출금|담보대출|주담대|신용대출|전세대출|대출원리금|원리금/;
+  const WORK = /사무용품|오피스디포|알파문구|문구|인쇄|명함|복사|코워킹|위워크|wework|패스트파이브|스파크플러스|aws|amazon web|github|노션|notion|슬랙|slack|zoom|어도비|adobe|figma|피그마/i;
   const CLOTHES = /의류|아이티엑스|한섬|세탁소|패션|무신사|musinsa|29cm|에이블리|지그재그|w컨셉|유니클로|uniqlo|자라|zara|h&m|에잇세컨즈|스파오|탑텐|나이키|nike|아디다스|adidas|뉴발란스|휠라|fila|노스페이스|폴로|빈폴|신발|슈즈|abc-?마트|abc-?mart|아울렛|브랜디|하프클럽|코오롱스포츠|데상트|언더아머|리바이스|구두/i;
   const COSMETIC = /화장품|코스메틱|cosmetic|올리브영|oliveyoung|시코르|세포라|sephora|아리따움|이니스프리|innisfree|아모레|에뛰드|더페이스샵|미샤|토니모리|네이처리퍼블릭|스킨푸드|러쉬|lush|키엘|kiehl|랑콤|에스티로더|설화수|헤라|뷰티|beauty/i;
   const EXERCISE = /강남구청|헬스|피트니스|fitness|요가|필라테스|크로스핏|퍼스널트레이닝|수영장|스포츠센터|체육관|체육센터|골프|테니스|배드민턴|클라이밍|볼더링|복싱|주짓수|태권도|검도|합기도|발레(?!파킹)|댄스|스피닝|마라톤|스키장|볼링|당구|탁구|풋살|데카트론|decathlon/i;
@@ -396,8 +657,12 @@
   const CARD_PAY = /카드대금|카드결제대금|카드값|(신한|삼성|현대|국민|kb|롯데|하나|우리|비씨|bc|nh|농협|씨티|ibk|기업)카드/i;
   const INVEST = /증권|투자|키움|미래에셋|한국투자|한투|업비트|빗썸|코인원|코빗|두나무|isa|irp|연금저축|펀드|cma|주식/i;
   const SAVING = /적금|예금|청약|저축|세이프박스|저금통|비상금|파킹|모으기/;
-  const SALARY = /급여|월급|상여|보너스|임금|성과급/;
+  const BONUS = /상여|보너스|성과급|인센티브|명절휴가비/;
+  const SALARY = /급여|월급|임금/;
+  const DIVIDEND = /배당|분배금/;
+  const REFUND = /환급|연말정산/;
   const INTEREST = /이자|결산/;
+  const TRIP_PAY = /출장비|출장여비|출장|여비|일비/;
   const OWN_MOVE = /만기|해지|증권|적금|예금|투자|파킹|세이프박스/;
 
   // ----- 직접 지정한 분류 기억 -----
@@ -441,11 +706,56 @@
 
   const hit = (re, m) => `"${m.match(re)[0].trim()}" 포함`;
 
+  // 통장 예금주 이름 (설정에 없으면 로그인 이름). 한 글자는 다른 내용과 잘못 겹칠 수 있어 쓰지 않아요.
+  function ownNames() {
+    const list = Array.isArray(settings.ownNames) ? settings.ownNames : [userName];
+    return list.map(norm).filter(n => n.length >= 2);
+  }
+  function ownNameIn(memo) {
+    const m = norm(memo);
+    return ownNames().find(n => m.includes(n)) || '';
+  }
+
+  // ----- 통장 내역 → 자산 연결 -----
+  // 자산에 적어 둔 키워드가 내용에 있으면 그 자산으로 들어간 돈이에요 (가장 긴 키워드 우선)
+  function assetFor(memo) {
+    const m = norm(memo);
+    let best = null, bestLen = 0;
+    for (const a of assets) {
+      for (const k of String(a.keywords || '').split(/[,，]/).map(norm)) {
+        if (k.length >= 2 && k.length > bestLen && m.includes(k)) { best = a; bestLen = k.length; }
+      }
+    }
+    return best;
+  }
+  const isLoan = a => a && a.category === '대출금';
+  const assetById = id => assets.find(a => a.id === id) || null;
+
+  function classifyAsset(a, dir) {
+    if (dir === 'in') {
+      return { cat: 'skip', reason: `"${a.name}"에서 나온 돈이라 제외 — 만기·해지·대출 실행은 자산 금액을 직접 고쳐 주세요` };
+    }
+    if (isLoan(a)) {
+      return { cat: 'saving:대출상환', assetId: a.id, loan: true, reason: `대출금 "${a.name}" 상환 — 이자가 섞여 있으면 '이자' 버튼으로 나눠 주세요` };
+    }
+    return { cat: a.category === '주식·채권' ? 'saving:투자' : 'saving:저축', assetId: a.id, reason: `자산 "${a.name}"에 더해요` };
+  }
+
   function classify(memo, dir, src) {
+    const m = memo || '';
+    // 자산 키워드가 먼저 — 내 이름으로 보낸 적금·연금 이체도 해당 자산에 반영
+    const linked = src === 'bank' && assetFor(m);
+    if (linked) return classifyAsset(linked, dir);
+    // 내 이름으로 오간 돈은 내 통장끼리 옮긴 것 — 지출·수입이 아니에요
+    if (src === 'bank' && ownNameIn(m)) {
+      if (dir === 'out' && INVEST.test(m)) return { cat: 'saving:투자', reason: `본인 계좌 · ${hit(INVEST, m)}` };
+      if (dir === 'out' && SAVING.test(m)) return { cat: 'saving:저축', reason: `본인 계좌 · ${hit(SAVING, m)}` };
+      return { cat: 'skip', own: true, reason: '본인 이름 이체 — 내 통장끼리 옮긴 돈이라 제외' };
+    }
     const learned = findRule(memo, dir);
     if (learned) return { cat: learned, reason: '직접 지정했던 분류를 기억해서 적용', learned: true };
-    const m = memo || '';
     if (dir === 'out') {
+      if (LOAN_INT.test(m)) return { cat: 'expense:대출이자', reason: hit(LOAN_INT, m) };
       if (src === 'bank') {
         if (CARD_PAY.test(m) && !/체크/.test(m)) return { cat: 'skip', reason: '카드대금 — 카드 내역과 중복되어 제외' };
         if (INVEST.test(m)) return { cat: 'saving:투자', reason: hit(INVEST, m) };
@@ -455,18 +765,25 @@
       if (CLOTHES.test(m)) return { cat: 'expense:의류비', reason: hit(CLOTHES, m) };
       if (EXERCISE.test(m)) return { cat: 'expense:운동비', reason: hit(EXERCISE, m) };
       if (STUDY.test(m)) return { cat: 'expense:학습비', reason: hit(STUDY, m) };
-      if (TRANSPORT.test(m)) return { cat: 'expense:교통비', reason: hit(TRANSPORT, m) };
+      if (WORK.test(m)) return { cat: 'expense:업무 관련', reason: hit(WORK, m) };
+      if (TRAVEL.test(m)) return { cat: 'expense:여행비', reason: hit(TRAVEL, m) };
+      if (TRANSPORT.test(m)) return { cat: 'expense:교통비:' + guessSub('교통비', m), reason: hit(TRANSPORT, m) };
       if (UTIL.test(m)) return { cat: 'expense:공과금', reason: hit(UTIL, m) };
-      if (FOOD.test(m)) return { cat: 'expense:식비', reason: hit(FOOD, m) };
+      if (FOOD.test(m)) return { cat: 'expense:식비:' + guessSub('식비', m), reason: hit(FOOD, m) };
       return src === 'bank'
         ? { cat: 'expense:생활비', reason: '규칙에 없음 — 확인 필요', flag: true }
         : { cat: 'expense:생활비', reason: '다른 분류에 해당하지 않아 생활비' };
     }
     if (src === 'card') return { cat: 'skip', reason: '취소·환불 내역' };
+    if (TRIP_PAY.test(m)) return { cat: 'income:출장비', reason: hit(TRIP_PAY, m) };
+    if (BONUS.test(m)) return { cat: 'income:상여금', reason: hit(BONUS, m) };
     if (SALARY.test(m)) return { cat: 'income:월급', reason: hit(SALARY, m) };
+    // 증권사 이름이 있어도 배당·분배금은 수입 (아래 '돌아온 내 돈' 제외보다 먼저)
+    if (DIVIDEND.test(m)) return { cat: 'income:배당금', reason: hit(DIVIDEND, m) };
     if (INTEREST.test(m)) return { cat: 'income:이자', reason: hit(INTEREST, m) };
+    if (REFUND.test(m)) return { cat: 'income:환급금', reason: hit(REFUND, m) };
     if (OWN_MOVE.test(m)) return { cat: 'skip', reason: '적금·투자에서 돌아온 내 돈이라 제외' };
-    return { cat: 'income:기타', reason: '규칙에 없음 — 확인 필요', flag: true };
+    return { cat: 'income:잡수입', reason: '규칙에 없음 — 확인 필요', flag: true };
   }
 
   // ================= 저장 (내 구글 시트) =================
@@ -483,6 +800,10 @@
   let token = null, userName = '';
   let lastSaved = new Map();     // id → 서버에 저장된 내용
   let rulesJSON = '{}';
+  let assets = [];
+  let lastSavedAssets = new Map(); // id → 서버에 저장된 내용
+  let settings = {};              // { ownNames: [...] }
+  let settingsJSON = '{}';
   let saving = false, saveAgain = false, saveTimer = null;
   let syncError = false, needsResync = false;
 
@@ -540,6 +861,21 @@
         if (rj !== rulesJSON) {
           await api('saveRules', token, rules);
           rulesJSON = rj;
+        }
+        const curA = new Map();
+        for (const a of assets) { const n = normalizeAsset(a); if (n) curA.set(n.id, n); }
+        const aUp = [], aDel = [];
+        for (const [id, n] of curA) if (lastSavedAssets.get(id) !== JSON.stringify(n)) aUp.push(n);
+        for (const id of lastSavedAssets.keys()) if (!curA.has(id)) aDel.push(id);
+        if (aUp.length || aDel.length) {
+          await api('saveAssets', token, aUp, aDel);
+          for (const n of aUp) lastSavedAssets.set(n.id, JSON.stringify(n));
+          for (const id of aDel) lastSavedAssets.delete(id);
+        }
+        const sj = JSON.stringify(settings);
+        if (sj !== settingsJSON) {
+          await api('saveSettings', token, settings);
+          settingsJSON = sj;
         }
       } while (saveAgain);
       syncError = false;
@@ -618,6 +954,30 @@
       ...(e.source ? { source: e.source } : {}),
       ...(e.origAmount > 0 && Math.round(e.origAmount) !== amount ? { origAmount: Math.round(e.origAmount) } : {}),
       ...(e.batch ? { batch: e.batch } : {}),
+      ...(e.assetId && e.type === 'saving' ? { assetId: String(e.assetId) } : {}),
+      ...(SUBCATS[category] ? { sub: SUBCATS[category].includes(e.sub) ? e.sub : guessSub(category, e.memo) } : {}),
+    };
+  }
+
+  function normalizeAsset(a) {
+    if (!a || typeof a !== 'object' || !ASSET_CATEGORIES.includes(a.category)) return null;
+    const name = String(a.name || '').trim().slice(0, 40);
+    const amount = Math.round(Number(a.amount));
+    if (!name || !(amount >= 0)) return null;
+    const fx = Number(a.fxAmount), rate = Number(a.fxRate);
+    const isFx = a.category === '외화';
+    return {
+      id: typeof a.id === 'string' && a.id ? a.id : newId(),
+      category: a.category, name, amount,
+      ...(isFx && a.currency ? { currency: String(a.currency).slice(0, 10) } : {}),
+      ...(isFx && fx > 0 ? { fxAmount: fx } : {}),
+      ...(isFx && rate > 0 ? { fxRate: rate } : {}),
+      memo: typeof a.memo === 'string' ? a.memo : '',
+      keywords: typeof a.keywords === 'string' ? a.keywords.trim().slice(0, 100) : '',
+      ...(a.category === '대출금' && Number(a.rate) > 0 && Number(a.rate) < 100 ? { rate: Math.round(Number(a.rate) * 1000) / 1000 } : {}),
+      ...(a.category === '대출금' && LOAN_METHODS.includes(a.method) ? { method: a.method } : {}),
+      ...(a.category === '대출금' && MONTH_RE.test(String(a.maturity || '')) ? { maturity: String(a.maturity) } : {}),
+      updatedAt: /^\d{4}-\d{2}-\d{2}$/.test(a.updatedAt) ? a.updatedAt : today(),
     };
   }
 
@@ -889,7 +1249,12 @@
         existing.set(k, existing.get(k) - 1);
         return { ...r, orig: r.amount, cat: 'skip', reason: '이미 가져온 내역이라 제외', dup: true };
       }
-      return { ...r, orig: r.amount, ...classify(r.memo, r.dir, pv.src) };
+      const c = classify(r.memo, r.dir, pv.src);
+      if (c.cat !== 'skip') c.cat = fullCat(c.cat, r.memo);
+      // 자산 기준일 이전 내역은 이미 자산 금액에 들어 있어요
+      const a = c.assetId && assetById(c.assetId);
+      if (a && r.date <= a.updatedAt) c.reason += ` (기준일 ${a.updatedAt} 이전이라 자산 금액은 그대로)`;
+      return { ...r, orig: r.amount, ...c };
     });
     pv.rows.sort((a, b) => b.date.localeCompare(a.date));
     pv.skipped = skipped;
@@ -902,6 +1267,15 @@
       g.label = TYPE_LABEL[t];
       for (const c of CATEGORIES[t]) {
         const o = document.createElement('option');
+        if (SUBCATS[c]) {
+          for (const sub of SUBCATS[c]) {
+            const so = document.createElement('option');
+            so.value = `${t}:${c}:${sub}`;
+            so.textContent = `${c} · ${sub}`;
+            g.append(so);
+          }
+          continue;
+        }
         o.value = `${t}:${c}`;
         o.textContent = c;
         g.append(o);
@@ -963,15 +1337,19 @@
     const sum = $('preview-summary');
     sum.innerHTML = '';
     const totals = {};
-    let skipCount = 0, flagCount = 0, offCount = 0;
+    let skipCount = 0, flagCount = 0, offCount = 0, ownCount = 0;
     for (const r of pv.rows) {
+      if (r.cat === 'skip' && r.own) { ownCount++; continue; }
       if (r.cat === 'skip') { skipCount++; continue; }
       if (r.off) { offCount++; continue; }
       if (!(r.amount > 0)) continue;
       if (r.flag) flagCount++;
-      (totals[r.cat] ||= { n: 0, amt: 0 });
-      totals[r.cat].n++;
-      totals[r.cat].amt += r.amount;
+      for (const [cat, amt] of rowParts(r)) {
+        const key = cat.split(':').slice(0, 2).join(':');
+        (totals[key] ||= { n: 0, amt: 0 });
+        totals[key].n++;
+        totals[key].amt += amt;
+      }
     }
     const chip = (html) => { const s = document.createElement('span'); s.className = 'chip'; s.append(...html); sum.append(s); };
     for (const t of ['expense', 'saving', 'income']) for (const c of CATEGORIES[t]) {
@@ -983,6 +1361,7 @@
       chip([b, ` ${v.n}건 · ${won(v.amt)}`]);
     }
     if (offCount) chip([`체크 해제 ${offCount}건`]);
+    if (ownCount) chip([`본인 이체 제외 ${ownCount}건`]);
     if (skipCount) chip([`자동 제외 ${skipCount}건`]);
     if (flagCount) chip([`확인 필요 ${flagCount}건`]);
     if (pv.skipped) chip([`읽지 않은 줄 ${pv.skipped}개`]);
@@ -1071,8 +1450,26 @@
         renderSummary();
       };
       line.append(sign, input, split);
+      // 대출 원리금: 이자 부분은 지출(대출이자), 나머지 원금만 대출금에서 빼요
+      if (r.cat === 'saving:대출상환' && isLoan(assetById(r.assetId))) {
+        const intBtn = document.createElement('button');
+        intBtn.type = 'button';
+        intBtn.className = 'split';
+        intBtn.textContent = '이자';
+        intBtn.title = '원리금에서 이자 나누기';
+        intBtn.onclick = async () => {
+          const v = await ask({ title: '원금과 이자 나누기', message: `${won(r.amount)} 중 이자는 얼마인가요?\n이자는 지출(대출이자)로, 나머지 원금은 대출금에서 빠져요.`, input: { value: r.interest || expectedInterest(r) || '' }, ok: '나누기' });
+          if (v === null) return;
+          const n = Math.round(Number(v));
+          if (!(n >= 0 && n < r.amount)) return toast('0 이상, 전체 금액보다 작은 숫자를 입력해 주세요.');
+          r.interest = n;
+          renderPreview();
+        };
+        line.append(intBtn);
+      }
       amt.append(line, orig);
       showOrig();
+      if (r.interest > 0 && r.interest < r.amount) orig.textContent = `원금 ${won(r.amount - r.interest)} + 이자 ${won(r.interest)}`;
       const sel = catSelect(r.cat);
       sel.onchange = () => changeRowCat(idx, sel.value);
       li.append(dt, memo, amt, sel);
@@ -1089,7 +1486,7 @@
     if (on) {
       r.off = false;
       if (r.cat === 'skip') {
-        r.cat = r.dir === 'in' ? 'income:기타' : 'expense:생활비';
+        r.cat = r.dir === 'in' ? 'income:잡수입' : 'expense:생활비';
         r.reason = '직접 선택 — 분류를 확인해 주세요';
         r.flag = false;
       }
@@ -1135,15 +1532,26 @@
     $('import-msg').hidden = false;
   }
 
+  // 미리보기 한 줄 → [분류, 금액] 목록 (원리금을 나눈 경우 원금 + 이자 두 개)
+  function rowParts(r) {
+    const split = r.cat === 'saving:대출상환' && r.interest > 0 && r.interest < r.amount;
+    return split ? [[r.cat, r.amount - r.interest], ['expense:대출이자', r.interest]] : [[r.cat, r.amount]];
+  }
+
   function doImport() {
     const batch = newId();
     const added = [];
     for (const r of pv.rows) {
       if (r.cat === 'skip' || r.off || !(r.amount > 0)) continue;
-      const [type, category] = r.cat.split(':');
-      added.push({
-        id: newId(), type, category, date: r.date, amount: r.amount, memo: r.memo, source: pv.src, batch,
-        ...(r.amount !== r.orig ? { origAmount: r.orig } : {}),
+      rowParts(r).forEach(([cat, amount], i) => {
+        const [type, category, sub] = cat.split(':');
+        added.push({
+          id: newId(), type, category, date: r.date, amount, memo: r.memo, source: pv.src, batch,
+          ...(sub ? { sub } : {}),
+          // 첫 줄은 원래 금액을 기억해서 다음 가져오기 때 중복으로 알아봐요
+          ...(i === 0 && amount !== r.orig ? { origAmount: r.orig } : {}),
+          ...(type === 'saving' && r.assetId && assetById(r.assetId) ? { assetId: r.assetId } : {}),
+        });
       });
     }
     entries.push(...added);
@@ -1162,14 +1570,28 @@
 
   // 가져오기 UI
   const HELP = {
-    card: '카드사 홈페이지·앱의 이용내역 표를 드래그해서 복사하거나, 엑셀로 받은 파일을 열어 표 전체를 복사해 붙여넣으세요. 엑셀·CSV 파일을 바로 골라도 돼요. 식비 / 교통비 / 의류비 / 화장품 / 운동비 / 학습비 / 공과금 / 생활비로 자동 분류해요.',
-    bank: '은행 홈페이지·앱의 거래내역 표를 복사해 붙여넣거나 엑셀·CSV 파일을 고르세요. 출금은 저축 / 투자와 카드 내역과 같은 지출 항목으로, 입금은 월급 / 이자 등으로 분류해요. 카드대금 출금은 카드 내역과 겹치지 않게 자동으로 빼요.',
+    card: '카드사 홈페이지·앱의 이용내역 표를 드래그해서 복사하거나, 엑셀로 받은 파일을 열어 표 전체를 복사해 붙여넣으세요. 엑셀·CSV 파일을 바로 골라도 돼요. 식비 / 교통비 / 의류비 / 화장품 / 운동비 / 학습비 / 공과금 / 여행비 / 대출이자 / 업무 관련 / 생활비로 자동 분류해요.',
+    bank: '은행 홈페이지·앱의 거래내역 표를 복사해 붙여넣거나 엑셀·CSV 파일을 고르세요. 출금은 저축 / 투자 / 대출이자와 카드 내역과 같은 지출 항목으로, 입금은 월급 / 상여금 / 배당금 / 이자 / 환급금 등으로 분류해요. 카드대금 출금과 내 이름으로 오간 이체는 가계부에 넣지 않아요.',
   };
   function setSrc(s) {
     src = s;
     document.querySelectorAll('#src-toggle button').forEach(b => b.classList.toggle('active', b.dataset.src === s));
     $('src-help').textContent = HELP[s];
+    $('own-box').hidden = s !== 'bank';
   }
+
+  // ----- 내 이름 (예금주) -----
+  function showOwnNames() {
+    const list = Array.isArray(settings.ownNames) ? settings.ownNames : [userName].filter(Boolean);
+    $('own-names').value = list.join(', ');
+  }
+  $('own-names').onchange = () => {
+    settings = { ...settings, ownNames: $('own-names').value.split(/[,，]/).map(s => s.trim()).filter(Boolean).slice(0, 10) };
+    showOwnNames();
+    save();
+    // 열려 있는 통장 미리보기에 바로 반영
+    if (pv && pv.src === 'bank') { buildPreviewRows(); renderPreview(); }
+  };
   document.querySelectorAll('#src-toggle button').forEach(b => b.onclick = () => setSrc(b.dataset.src));
   $('analyze').onclick = () => startPreview(parseText($('paste').value));
   $('pick-file').onclick = () => $('src-file').click();
@@ -1201,17 +1623,43 @@
   let editingId = null;
   let viewYear, viewMonth;
 
-  function setType(t, category) {
+  function setType(t, category, sub) {
     type = t;
     document.querySelectorAll('#type-toggle button').forEach(b => b.classList.toggle('active', b.dataset.type === t));
     const sel = $('category');
     sel.innerHTML = '';
     for (const c of CATEGORIES[t]) {
-      const opt = document.createElement('option');
-      opt.value = opt.textContent = c;
-      sel.append(opt);
+      // 교통비는 "교통비 · 주유비"처럼 세부항목으로 골라요 (값: 교통비:주유비)
+      for (const s of SUBCATS[c] || [null]) {
+        const opt = document.createElement('option');
+        opt.value = s ? `${c}:${s}` : c;
+        opt.textContent = s ? `${c} · ${s}` : c;
+        sel.append(opt);
+      }
     }
-    if (category && CATEGORIES[t].includes(category)) sel.value = category;
+    if (category && CATEGORIES[t].includes(category)) {
+      sel.value = SUBCATS[category] ? `${category}:${SUBCATS[category].includes(sub) ? sub : SUBCATS[category][0]}` : category;
+    }
+    fillLinkSelect();
+  }
+
+  // 저축·투자 내역은 자산에 연결할 수 있어요 (연결하면 자산 금액에 자동 반영)
+  function fillLinkSelect(current) {
+    const sel = $('link-asset');
+    const keep = current !== undefined ? current : sel.value;
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '자산에 연결 안 함';
+    sel.append(none);
+    for (const a of assets) {
+      const o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = `→ ${a.category} · ${a.name}${isLoan(a) ? ' (상환하면 줄어요)' : ' (넣으면 늘어요)'}`;
+      sel.append(o);
+    }
+    sel.value = assetById(keep) ? keep : '';
+    $('link-field').hidden = type !== 'saving' || !assets.length;
   }
 
   function resetForm() {
@@ -1228,7 +1676,8 @@
   function startEdit(e) {
     editingId = e.id;
     $('manual').open = true;
-    setType(e.type, e.category);
+    setType(e.type, e.category, e.sub);
+    fillLinkSelect(e.assetId || '');
     $('date').value = e.date;
     $('amount').value = e.amount;
     $('memo').value = e.memo;
@@ -1244,21 +1693,25 @@
     const amount = Math.round(Number($('amount').value));
     const date = $('date').value;
     if (!date || !(amount > 0)) return;
-    const data = { type, date, amount, category: $('category').value, memo: $('memo').value.trim() };
+    const [catV, subV] = $('category').value.split(':');
+    const data = { type, date, amount, category: catV, ...(subV ? { sub: subV } : {}), memo: $('memo').value.trim() };
+    const link = type === 'saving' && $('link-asset').value;
     if (editingId) {
       const e = entries.find(x => x.id === editingId);
       if (e) {
         // 가져온 내역의 분류를 고치면 다음 가져오기 때도 기억
-        if (e.source && data.memo && (e.type !== data.type || e.category !== data.category)) {
-          learn(data.memo, `${data.type}:${data.category}`);
+        if (e.source && data.memo && (e.type !== data.type || e.category !== data.category || (e.sub || '') !== (data.sub || ''))) {
+          learn(data.memo, [data.type, data.category, data.sub].filter(Boolean).join(':'));
         }
         // 가져온 뒤 금액을 고쳐도 다음 가져오기 때 중복으로 알아보도록 원래 금액 보관
         if (e.source && !e.origAmount && data.amount !== e.amount) e.origAmount = e.amount;
         if (e.origAmount === data.amount) delete e.origAmount;
         Object.assign(e, data);
+        if (!data.sub) delete e.sub;
+        if (link) e.assetId = link; else delete e.assetId;
       }
     } else {
-      entries.push({ id: newId(), ...data });
+      entries.push({ id: newId(), ...data, ...(link ? { assetId: link } : {}) });
     }
     save();
     [viewYear, viewMonth] = date.split('-').map(Number);
@@ -1297,11 +1750,704 @@
     box.innerHTML = '';
     renderDonut(box, monthly, expense);
     renderBars(box, '저축·투자', monthly, 'saving', saving);
+    renderBars(box, '수입', monthly, 'income', income);
     $('cat-card').hidden = !box.children.length;
 
     renderHistory(monthly);
     renderRules();
+    renderAssets();
+    if (!$('household-view').hidden) renderHousehold();
   }
+
+  // ================= 가계부 / 자산 탭 =================
+  function setView(v) {
+    document.querySelectorAll('#view-tabs button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+    $('ledger-view').hidden = v !== 'ledger';
+    $('asset-view').hidden = v !== 'assets';
+    $('household-view').hidden = v !== 'household';
+    if (v === 'household') loadHousehold();
+    if (v === 'assets') renderTrend(); // 화면 너비에 맞춰 다시 그리기
+    try { localStorage.setItem('budget-view', v); } catch {}
+  }
+  document.querySelectorAll('#view-tabs button').forEach(b => b.onclick = () => {
+    if (b.dataset.view === 'household' && !$('household-view').hidden) return loadHousehold(true); // 다시 누르면 새로 불러오기
+    setView(b.dataset.view);
+  });
+
+  // ================= 함께 보기 =================
+  // 공유해 준 사람의 데이터는 서버에서 읽기 전용으로 받아와요. 내 데이터는 화면에 있는 최신 것을 써요.
+  let household = null;     // { partners: [{ name, entries, assets }], shareWith, at }
+  let householdLoading = false;
+  const PERSON_COLOR = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s7)'];
+
+  async function loadHousehold(force) {
+    if (!token || householdLoading) return;
+    if (household && !force && Date.now() - household.at < 60000) return renderHousehold();
+    householdLoading = true;
+    renderHousehold();
+    try {
+      const d = await api('getHousehold', token);
+      household = {
+        at: Date.now(),
+        shareWith: d.shareWith || [],
+        partners: (d.partners || []).map(p => ({
+          name: p.name,
+          entries: (p.entries || []).map(normalizeEntry).filter(Boolean),
+          assets: (p.assets || []).map(normalizeAsset).filter(Boolean),
+        })),
+      };
+    } catch (err) {
+      if (isAuthError(err)) {
+        token = null; forgetSession();
+        return showGate('login', '로그인한 지 오래되어 다시 PIN을 입력해 주세요.');
+      }
+      toast(errText(err) || '함께 보기를 불러오지 못했어요.');
+    } finally {
+      householdLoading = false;
+    }
+    renderHousehold();
+  }
+
+  function whoLines(el, people, valueOf, fmt) {
+    el.innerHTML = '';
+    people.forEach((p, i) => {
+      const row = document.createElement('div');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = PERSON_COLOR[i % PERSON_COLOR.length];
+      row.append(dot, `${p.name} ${(fmt || won)(valueOf(p))}`);
+      el.append(row);
+    });
+  }
+  const signedWon = n => (n < 0 ? '-' : '') + won(Math.abs(n));
+
+  // rows: [{ label, parts: [금액(사람 순서)] }] → 사람별로 쌓은 가로 막대
+  function stackedRows(box, rows, people, opts = {}) {
+    box.innerHTML = '';
+    const max = Math.max(1, ...rows.map(r => r.parts.reduce((s, v) => s + v, 0)));
+    for (const r of rows) {
+      const sum = r.parts.reduce((s, v) => s + v, 0);
+      if (!sum) continue;
+      const row = document.createElement('div');
+      row.className = 'hrow';
+      const head = document.createElement('div');
+      head.className = 'hrow-head';
+      const l = document.createElement('b');
+      l.textContent = r.label;
+      const v = document.createElement('span');
+      v.textContent = (opts.negative && opts.negative(r) ? '-' : '') + won(sum);
+      if (opts.negative && opts.negative(r)) v.className = 'expense';
+      head.append(l, v);
+      const bar = document.createElement('div');
+      bar.className = 'hbar';
+      bar.style.width = (sum / max * 100) + '%';
+      bar.setAttribute('role', 'img');
+      bar.setAttribute('aria-label', `${r.label}: ` + people.map((p, i) => `${p.name} ${won(r.parts[i])}`).join(', '));
+      r.parts.forEach((amt, i) => {
+        if (!amt) return;
+        const seg = document.createElement('div');
+        seg.style.flex = `${amt} 0 0`;
+        seg.style.background = PERSON_COLOR[i % PERSON_COLOR.length];
+        seg.title = `${people[i].name} ${won(amt)} (${Math.round(amt / sum * 100)}%)`;
+        bar.append(seg);
+      });
+      const who = document.createElement('div');
+      who.className = 'hrow-who';
+      who.textContent = people.map((p, i) => r.parts[i] ? `${p.name} ${won(r.parts[i])}` : '').filter(Boolean).join(' · ');
+      row.append(head, bar, who);
+      box.append(row);
+    }
+    if (!box.children.length) box.innerHTML = `<div class="empty">${opts.empty || '내역이 없어요'}</div>`;
+  }
+
+  function renderShareBox() {
+    if (document.activeElement !== $('share-names')) {
+      $('share-names').value = (Array.isArray(settings.shareWith) ? settings.shareWith : []).join(', ');
+    }
+    const ul = $('share-status');
+    ul.innerHTML = '';
+    const mine = (settings.shareWith || []).map(n => n.toLowerCase());
+    const partners = household ? household.partners.map(p => p.name) : [];
+    const lower = partners.map(n => n.toLowerCase());
+    const add = t => { const li = document.createElement('li'); li.textContent = t; ul.append(li); };
+    for (const n of settings.shareWith || []) {
+      add(lower.includes(n.toLowerCase()) ? `✓ ${n}님과 서로 함께 보는 중` : `→ ${n}님에게 내 가계부를 보여주는 중 (${n}님이 내 이름을 넣으면 나도 볼 수 있어요)`);
+    }
+    for (const n of partners) if (!mine.includes(n.toLowerCase())) add(`← ${n}님이 가계부를 보여주고 있어요. 내 것도 보여주려면 위에 ${n}을 적어 주세요.`);
+  }
+
+  function renderHousehold() {
+    $('h-month').textContent = `${viewYear}년 ${viewMonth}월`;
+    renderShareBox();
+    const status = $('h-status');
+    if (!household) {
+      status.textContent = householdLoading ? '불러오는 중…' : '';
+      $('h-content').hidden = true;
+      return;
+    }
+    if (!household.partners.length) {
+      status.textContent = '아직 가계부를 보여준 사람이 없어요. 아래 "함께 보기 설정"에서 서로 이름을 넣어 주세요.';
+      $('h-content').hidden = true;
+      $('share-box').open = true;
+      return;
+    }
+    const t = new Date(household.at);
+    status.textContent = (householdLoading ? '새로 불러오는 중… ' : '') + `${pad(t.getHours())}:${pad(t.getMinutes())}에 불러옴 · 다른 사람 내역은 읽기 전용이에요`;
+    $('h-content').hidden = false;
+
+    const people = [{ name: userName, entries, assets }, ...household.partners];
+    const legend = $('h-people');
+    legend.innerHTML = '';
+    people.forEach((p, i) => {
+      const sp = document.createElement('span');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = PERSON_COLOR[i % PERSON_COLOR.length];
+      sp.append(dot, i === 0 ? `${p.name} (나)` : p.name);
+      legend.append(sp);
+    });
+
+    // 이 달 합계
+    const prefix = `${viewYear}-${pad(viewMonth)}-`;
+    const monthOf = p => p.entries.filter(e => e.date.startsWith(prefix));
+    const sumT = (p, t) => monthOf(p).filter(e => e.type === t).reduce((s, e) => s + e.amount, 0);
+    const tot = t => people.reduce((s, p) => s + sumT(p, t), 0);
+    const left = p => sumT(p, 'income') - sumT(p, 'expense') - sumT(p, 'saving');
+    $('h-income').textContent = won(tot('income'));
+    $('h-expense').textContent = won(tot('expense'));
+    $('h-saving').textContent = won(tot('saving'));
+    const allLeft = people.reduce((s, p) => s + left(p), 0);
+    $('h-balance').textContent = signedWon(allLeft);
+    $('h-balance').className = 'value ' + (allLeft < 0 ? 'expense' : '');
+    whoLines($('h-income-who'), people, p => sumT(p, 'income'));
+    whoLines($('h-expense-who'), people, p => sumT(p, 'expense'));
+    whoLines($('h-saving-who'), people, p => sumT(p, 'saving'));
+    whoLines($('h-balance-who'), people, left, signedWon);
+
+    // 카테고리별 지출 (사람별로 쌓기, 합계 큰 순)
+    const catRows = CATEGORIES.expense.map(c => ({
+      label: c,
+      parts: people.map(p => monthOf(p).filter(e => e.type === 'expense' && e.category === c).reduce((s, e) => s + e.amount, 0)),
+    })).sort((a, b) => b.parts.reduce((s, v) => s + v, 0) - a.parts.reduce((s, v) => s + v, 0));
+    stackedRows($('h-cats'), catRows, people, { empty: '이 달의 지출이 없어요' });
+
+    // 합친 자산 (지금 기준)
+    const nows = people.map(p => assetTotals(assetsNowFor(p.assets, p.entries)));
+    const sumA = k => nows.reduce((s, n) => s + n[k], 0);
+    $('h-asset-total').textContent = won(sumA('total'));
+    $('h-asset-debt').textContent = sumA('debt') ? '-' + won(sumA('debt')) : won(0);
+    const net = sumA('net');
+    $('h-asset-net').textContent = signedWon(net);
+    $('h-asset-net').className = 'value ' + (net < 0 ? 'expense' : '');
+    const idx = new Map(people.map((p, i) => [p, i]));
+    whoLines($('h-asset-total-who'), people, p => nows[idx.get(p)].total);
+    whoLines($('h-asset-debt-who'), people, p => nows[idx.get(p)].debt, n => (n ? '-' : '') + won(n));
+    whoLines($('h-asset-net-who'), people, p => nows[idx.get(p)].net, signedWon);
+    const lists = people.map(p => assetsNowFor(p.assets, p.entries));
+    const assetRows = ASSET_CATEGORIES.map(c => ({
+      label: c === '대출금' ? '대출금 (부채)' : c,
+      debt: c === '대출금',
+      parts: lists.map(l => l.filter(a => a.category === c).reduce((s, a) => s + a.amount, 0)),
+    }));
+    stackedRows($('h-assets'), assetRows, people, { negative: r => r.debt, empty: '등록한 자산이 없어요' });
+  }
+
+  $('h-prev').onclick = () => shiftMonth(-1);
+  $('h-next').onclick = () => shiftMonth(1);
+  $('share-names').onchange = () => {
+    const list = $('share-names').value.split(/[,，]/).map(x => x.trim()).filter(Boolean)
+      .filter(n => n.toLowerCase() !== String(userName).toLowerCase()).slice(0, 4);
+    settings = { ...settings, shareWith: list };
+    save();
+    renderShareBox();
+    toast(list.length ? `${list.join(', ')}님이 내 가계부를 볼 수 있어요` : '이제 아무도 내 가계부를 볼 수 없어요');
+  };
+
+  // ================= 자산 현황 =================
+  let editingAssetId = null;
+
+  // 지금 자산 금액 = 입력한 금액(기준일 기준) + 기준일 이후 연결된 저축·투자·대출상환 내역
+  // 저장하지 않고 매번 계산해서, 내역을 지우거나 가져오기를 되돌려도 바로 맞춰져요
+  function assetsNow() { return assetsNowFor(assets, entries); }
+  function assetsNowFor(assets, entries) {
+    const byId = new Map(assets.map(a => [a.id, a]));
+    const flow = new Map();
+    for (const e of entries) {
+      if (e.type !== 'saving' || !e.assetId) continue;
+      const a = byId.get(e.assetId);
+      if (!a || e.date <= a.updatedAt) continue;
+      const f = flow.get(a.id) || { sum: 0, n: 0 };
+      f.sum += e.amount; f.n++;
+      flow.set(a.id, f);
+    }
+    return assets.map(a => {
+      const f = flow.get(a.id) || { sum: 0, n: 0 };
+      const amount = isLoan(a) ? Math.max(0, a.amount - f.sum) : a.amount + f.sum;
+      return { ...a, base: a.amount, flow: f.sum, flowCount: f.n, amount };
+    });
+  }
+
+  function assetTotals(list) {
+    let total = 0, debt = 0;
+    for (const a of list) { if (a.category === '대출금') debt += a.amount; else total += a.amount; }
+    return { total, debt, net: total - debt };
+  }
+
+  function renderAssets() {
+    fillLinkSelect();
+    const list = assetsNow();
+    const { total, debt, net } = assetTotals(list);
+    $('asset-total').textContent = won(total);
+    $('asset-debt').textContent = debt ? '-' + won(debt) : won(0);
+    $('asset-net').textContent = (net < 0 ? '-' : '') + won(Math.abs(net));
+    $('asset-net').className = 'value ' + (net < 0 ? 'expense' : '');
+
+    // 분류별 합계
+    const groups = {};
+    for (const a of list) (groups[a.category] ||= []).push(a);
+    const sumOf = c => (groups[c] || []).reduce((s, a) => s + a.amount, 0);
+    const pctOf = v => (total ? (v / total * 100).toFixed(v / total < 0.1 ? 1 : 0) : '0');
+
+    // 자산 구성 원그래프 (대출금 제외) — 이웃 색 검증을 지키려고 분류 순서대로 그려요
+    const mix = ASSET_CATEGORIES.filter(c => c !== '대출금' && sumOf(c) > 0).map(c => ({ c, v: sumOf(c), n: groups[c].length }));
+    $('asset-mix-card').hidden = !total;
+    if (total) renderAssetDonut(mix, total, debt, net, pctOf);
+    renderLoans(list.filter(isLoan));
+    recordNetWorth(total, debt);
+    renderTrend();
+
+    // 분류별 목록
+    const box = $('asset-groups');
+    box.innerHTML = '';
+    if (!assets.length) {
+      box.innerHTML = '<div class="empty">아직 등록한 자산이 없어요. 위의 "자산 추가"에서 넣어 보세요.</div>';
+      return;
+    }
+    for (const c of ASSET_CATEGORIES) {
+      const items = (groups[c] || []).slice().sort((a, b) => b.amount - a.amount);
+      if (!items.length) continue;
+      const isDebt = c === '대출금';
+      const section = document.createElement('div');
+      section.className = 'day';
+      const head = document.createElement('div');
+      head.className = 'day-head';
+      const l = document.createElement('span');
+      l.textContent = `${c} · ${items.length}개` + (isDebt ? '' : ` · ${pctOf(sumOf(c))}%`);
+      const r = document.createElement('span');
+      r.textContent = (isDebt ? '-' : '') + won(sumOf(c));
+      head.append(l, r);
+      const ul = document.createElement('ul');
+      for (const a of items) {
+        const li = document.createElement('li');
+        if (a.id === editingAssetId) li.className = 'editing';
+        li.onclick = () => startAssetEdit(a);
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = ASSET_COLOR[c];
+        const nm = document.createElement('div');
+        nm.className = 'aname';
+        const t = document.createElement('div');
+        t.textContent = a.name;
+        const sub = document.createElement('div');
+        sub.className = 'asub';
+        const fx = a.fxAmount ? `${a.currency || ''} ${a.fxAmount.toLocaleString('ko-KR')}${a.fxRate ? ` × ${a.fxRate.toLocaleString('ko-KR')}원` : ''}` : '';
+        const flowText = a.flowCount
+          ? `${a.updatedAt} ${won(a.base)}에서 이체 ${a.flowCount}건 ${isDebt ? '상환 -' : '+'}${won(a.flow)}`
+          : `${a.updatedAt} 기준`;
+        const loanText = isDebt && a.rate ? `연 ${a.rate}% · ${a.method || '원리금균등'}${a.maturity ? ` · 만기 ${a.maturity}` : ''}` : '';
+        sub.textContent = [fx, loanText, a.memo, flowText].filter(Boolean).join(' · ');
+        nm.append(t, sub);
+        const amt = document.createElement('span');
+        amt.className = 'amt ' + (isDebt ? 'expense' : '');
+        amt.textContent = (isDebt ? '-' : '') + won(a.amount);
+        const del = document.createElement('button');
+        del.className = 'del';
+        del.title = '삭제';
+        del.textContent = '✕';
+        del.onclick = async ev => {
+          ev.stopPropagation();
+          const ok = await ask({ title: '자산 삭제', message: `${c} · ${a.name} ${won(a.amount)}을 삭제할까요?`, ok: '삭제', danger: true });
+          if (!ok) return;
+          assets = assets.filter(x => x.id !== a.id);
+          save();
+          if (editingAssetId === a.id) resetAssetForm();
+          renderAssets();
+        };
+        li.append(dot, nm, amt, del);
+        ul.append(li);
+      }
+      section.append(head, ul);
+      box.append(section);
+    }
+  }
+
+  // ----- 대출 상환 계산 -----
+  // 이번 달부터 만기 달까지 남은 납입 횟수 (이번 달 포함)
+  function monthsLeft(maturity) {
+    if (!MONTH_RE.test(String(maturity || ''))) return null;
+    const [y, m] = maturity.split('-').map(Number);
+    const [ty, tm] = today().split('-').map(Number);
+    return (y - ty) * 12 + (m - tm) + 1;
+  }
+
+  // balance: 지금 남은 대출금 → 이번 달 { interest, principal, payment, n, note }
+  function loanPlan(a, balance) {
+    const B = Math.max(0, balance);
+    const r = (Number(a.rate) || 0) / 100 / 12;
+    const method = a.method || '원리금균등';
+    const n = monthsLeft(a.maturity);
+    const interest = Math.round(B * r);
+    if (!B) return { interest: 0, principal: 0, payment: 0, n, note: '다 갚았어요' };
+    if (!(a.rate > 0)) return { interest: null, principal: null, payment: null, n, note: '금리를 입력하면 이자를 계산해요' };
+    if (n !== null && n < 1) return { interest, principal: B, payment: B + interest, n, note: '만기가 지났어요 — 만기를 확인해 주세요' };
+    if (method === '만기일시') {
+      const last = n === 1;
+      return { interest, principal: last ? B : 0, payment: interest + (last ? B : 0), n, note: last ? '이번 달이 만기 — 원금도 함께 갚아요' : '만기까지 이자만 내요' };
+    }
+    if (n === null) return { interest, principal: null, payment: null, n, note: '만기를 입력하면 월 상환금액(원금+이자)을 계산해요' };
+    if (method === '원금균등') {
+      const principal = Math.round(B / n);
+      return { interest, principal, payment: principal + interest, n };
+    }
+    // 원리금균등: 매달 같은 금액 = B·r / (1 − (1+r)^−n)
+    const payment = Math.round(r ? B * r / (1 - Math.pow(1 + r, -n)) : B / n);
+    return { interest, principal: payment - interest, payment, n };
+  }
+
+  // 미리보기 '이자' 버튼 기본값: 연결된 대출의 이번 달 예상 이자
+  function expectedInterest(row) {
+    const a = assetsNow().find(x => x.id === row.assetId);
+    if (!a) return 0;
+    const p = loanPlan(a, a.amount);
+    return p.interest > 0 && p.interest < row.amount ? p.interest : 0;
+  }
+
+  function renderLoans(loans) {
+    const card = $('loan-card'), ul = $('loan-list');
+    card.hidden = !loans.length;
+    ul.innerHTML = '';
+    if (!loans.length) return;
+    $('loan-title').textContent = `이번 달(${Number(today().slice(5, 7))}월) 대출 상환 예상`;
+    let sumPay = 0, sumInt = 0, complete = true;
+    for (const a of loans) {
+      const p = loanPlan(a, a.amount);
+      const li = document.createElement('li');
+      const head = document.createElement('div');
+      head.className = 'loan-head';
+      const name = document.createElement('span');
+      name.textContent = a.name;
+      const bal = document.createElement('span');
+      bal.className = 'expense';
+      bal.textContent = '남은 ' + won(a.amount);
+      head.append(name, bal);
+      const sub = document.createElement('div');
+      sub.className = 'loan-sub';
+      sub.textContent = [
+        a.rate ? `연 ${a.rate}%` : '금리 미입력',
+        a.method || '원리금균등',
+        a.maturity ? `만기 ${a.maturity}${p.n > 0 ? ` (남은 ${p.n}회)` : ''}` : '만기 미입력',
+      ].join(' · ');
+      const grid = document.createElement('div');
+      grid.className = 'loan-break';
+      for (const [k, v] of [['이자', p.interest], ['원금', p.principal], ['합계 (원리금)', p.payment]]) {
+        const cell = document.createElement('div');
+        const kk = document.createElement('div'); kk.className = 'k'; kk.textContent = k;
+        const vv = document.createElement('div'); vv.className = 'v'; vv.textContent = v == null ? '—' : won(v);
+        cell.append(kk, vv);
+        grid.append(cell);
+      }
+      li.append(head, sub, grid);
+      if (p.note) {
+        const note = document.createElement('div');
+        note.className = 'loan-note';
+        note.textContent = p.note;
+        li.append(note);
+      }
+      li.style.cursor = 'pointer';
+      li.title = '눌러서 금리·만기 수정';
+      li.onclick = () => startAssetEdit(a);
+      ul.append(li);
+      if (p.payment == null) complete = false; else sumPay += p.payment;
+      if (p.interest != null) sumInt += p.interest;
+    }
+    if (loans.length > 1 || !complete) {
+      const li = document.createElement('li');
+      li.className = 'loan-total';
+      const l = document.createElement('span');
+      l.textContent = complete ? '이번 달 갚을 돈 합계' : '이번 달 이자 합계 (계산 가능한 것만)';
+      const r = document.createElement('span');
+      r.textContent = won(complete ? sumPay : sumInt);
+      li.append(l, r);
+      ul.append(li);
+    }
+  }
+
+  // 큰 금액을 짧게: 1.2억, 350만
+  function shortWon(n) {
+    const s = n < 0 ? '-' : '', v = Math.abs(n);
+    if (v >= 1e8) return s + (v / 1e8).toFixed(v >= 1e9 ? 0 : 1).replace(/\.0$/, '') + '억';
+    if (v >= 1e4) return s + Math.round(v / 1e4).toLocaleString('ko-KR') + '만';
+    return s + v.toLocaleString('ko-KR');
+  }
+
+  function renderAssetDonut(mix, total, debt, net, pctOf) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const box = $('asset-donut'), legend = $('asset-legend');
+    box.innerHTML = '';
+    legend.innerHTML = '';
+    const r = 78, sw = 30, C = 2 * Math.PI * r;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 200 200');
+    svg.setAttribute('class', 'donut');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', '자산 구성: ' + mix.map(m => `${m.c} ${pctOf(m.v)}%`).join(', '));
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', 'rotate(-90 100 100)');
+    const gap = mix.length > 1 ? 2 : 0;
+    let offset = 0;
+    const slices = {}, rows = {};
+    for (const m of mix) {
+      const len = m.v / total * C;
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', 100); c.setAttribute('cy', 100); c.setAttribute('r', r);
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke-width', sw);
+      c.setAttribute('stroke-dasharray', `${Math.max(len - gap, 0.5)} ${C}`);
+      c.setAttribute('stroke-dashoffset', -offset);
+      c.setAttribute('class', 'slice');
+      c.style.stroke = ASSET_COLOR[m.c];
+      c.onmouseenter = () => focus(m);
+      c.onmouseleave = () => focus(null);
+      g.append(c);
+      slices[m.c] = c;
+      offset += len;
+    }
+    svg.append(g);
+    const center = document.createElement('div');
+    center.className = 'donut-center';
+    const dl = document.createElement('div'); dl.className = 'dl';
+    const dv = document.createElement('div'); dv.className = 'dv';
+    const ds = document.createElement('div'); ds.className = 'ds';
+    center.append(dl, dv, ds);
+    box.append(svg, center);
+
+    for (const m of mix) {
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = ASSET_COLOR[m.c];
+      const name = document.createElement('span');
+      name.className = 'lname';
+      name.textContent = m.c;
+      const pct = document.createElement('span');
+      pct.className = 'lpct';
+      pct.textContent = pctOf(m.v) + '%';
+      const amt = document.createElement('span');
+      amt.className = 'lamt';
+      amt.textContent = won(m.v);
+      li.append(dot, name, pct, amt);
+      li.onmouseenter = () => focus(m);
+      li.onmouseleave = () => focus(null);
+      legend.append(li);
+      rows[m.c] = li;
+    }
+    if (debt) {
+      const li = document.createElement('li');
+      li.className = 'debt-line';
+      const l = document.createElement('span');
+      l.textContent = `부채 (총자산의 ${(debt / total * 100).toFixed(0)}%)`;
+      const v = document.createElement('span');
+      v.className = 'lamt';
+      v.textContent = '-' + won(debt);
+      li.append(l, v);
+      legend.append(li);
+    }
+
+    function focus(m) {
+      svg.classList.toggle('hovering', !!m);
+      for (const k in slices) slices[k].classList.toggle('active', !!m && k === m.c);
+      for (const k in rows) rows[k].classList.toggle('active', !!m && k === m.c);
+      dl.textContent = m ? m.c : '순자산';
+      dv.textContent = m ? shortWon(m.v) : shortWon(net);
+      ds.textContent = m ? `${pctOf(m.v)}% · ${m.n}개` : `총자산 ${shortWon(total)}`;
+    }
+    focus(null);
+  }
+
+  // 달마다 마지막으로 본 총자산·부채를 기록해서 순자산 추이를 그려요
+  function recordNetWorth(total, debt) {
+    if (!token || !assets.length) return;
+    const ym = today().slice(0, 7);
+    const h = settings.history && typeof settings.history === 'object' ? settings.history : {};
+    const cur = h[ym];
+    if (cur && cur[0] === total && cur[1] === debt) return;
+    const next = { ...h, [ym]: [total, debt] };
+    const keys = Object.keys(next).sort();
+    while (keys.length > 120) delete next[keys.shift()];
+    settings = { ...settings, history: next };
+    save();
+  }
+
+  function renderTrend() {
+    const h = settings.history && typeof settings.history === 'object' ? settings.history : {};
+    const months = Object.keys(h).filter(k => /^\d{4}-\d{2}$/.test(k)).sort().slice(-12);
+    const card = $('trend-card'), box = $('trend');
+    card.hidden = !months.length;
+    if (!months.length) return;
+    $('trend-help').textContent = months.length < 2
+      ? '이번 달부터 기록하고 있어요. 다음 달부터 순자산이 어떻게 변하는지 막대로 보여요.'
+      : `최근 ${months.length}개월, 매달 마지막으로 확인한 순자산이에요. 막대에 올리면 자세히 보여요.`;
+    const data = months.map(k => ({ k, total: h[k][0], debt: h[k][1], net: h[k][0] - h[k][1] }));
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = Math.max(280, box.clientWidth || 600), H = 200;
+    const padL = 48, padR = 8, padT = 12, padB = 26;
+    const max = Math.max(0, ...data.map(d => d.net)), min = Math.min(0, ...data.map(d => d.net));
+    // 보기 좋은 눈금 간격
+    const span = (max - min) || Math.abs(max) || 1;
+    const raw = span / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= raw);
+    const top = Math.ceil(max / step) * step, bot = Math.floor(min / step) * step;
+    const y = v => padT + (top - v) / ((top - bot) || 1) * (H - padT - padB);
+    const slot = (W - padL - padR) / data.length;
+    const bw = Math.min(40, slot * 0.6);
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('height', H);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', '월별 순자산: ' + data.map(d => `${d.k} ${shortWon(d.net)}`).join(', '));
+    const el = (tag, attrs, text) => {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      if (text != null) n.textContent = text;
+      svg.append(n);
+      return n;
+    };
+    for (let v = bot; v <= top + step / 2; v += step) {
+      el('line', { x1: padL, x2: W - padR, y1: y(v), y2: y(v), class: v === 0 ? 'zero-line' : 'grid-line' });
+      el('text', { x: padL - 6, y: y(v) + 4, 'text-anchor': 'end', class: 'axis' }, shortWon(v));
+    }
+    const tip = document.createElement('div');
+    tip.className = 'tip';
+    tip.hidden = true;
+    const everyN = Math.ceil(data.length / Math.max(1, Math.floor((W - padL) / 48)));
+    data.forEach((d, i) => {
+      const cx = padL + slot * i + slot / 2;
+      const y0 = y(0), y1 = y(d.net);
+      const hgt = Math.max(1, Math.abs(y1 - y0));
+      // 0에서 시작해서 끝만 둥글게 (4px)
+      const rr = Math.min(4, hgt, bw / 2);
+      const x0 = cx - bw / 2, x1 = cx + bw / 2;
+      const pathD = d.net >= 0
+        ? `M${x0},${y0} V${y0 - hgt + rr} Q${x0},${y0 - hgt} ${x0 + rr},${y0 - hgt} H${x1 - rr} Q${x1},${y0 - hgt} ${x1},${y0 - hgt + rr} V${y0} Z`
+        : `M${x0},${y0} V${y0 + hgt - rr} Q${x0},${y0 + hgt} ${x0 + rr},${y0 + hgt} H${x1 - rr} Q${x1},${y0 + hgt} ${x1},${y0 + hgt - rr} V${y0} Z`;
+      // 막대보다 넓은 마우스 영역
+      const hit = el('rect', { x: padL + slot * i, y: padT, width: slot, height: H - padT - padB, class: 'hit' });
+      const col = el('path', { d: pathD, class: 'col' + (d.net < 0 ? ' neg' : '') });
+      if (i % everyN === 0 || i === data.length - 1) {
+        const [yy, mm] = d.k.split('-');
+        el('text', { x: cx, y: H - 8, 'text-anchor': 'middle', class: 'axis' }, i === 0 || mm === '01' ? `${yy.slice(2)}.${Number(mm)}월` : `${Number(mm)}월`);
+      }
+      const show = () => {
+        col.classList.add('active');
+        const [yy, mm] = d.k.split('-');
+        tip.innerHTML = '';
+        const t = document.createElement('b');
+        t.textContent = `${yy}년 ${Number(mm)}월`;
+        const lines = [`순자산 ${won(d.net)}`, `총자산 ${won(d.total)}`, `부채 ${won(d.debt)}`];
+        tip.append(t, ...lines.flatMap(s => [document.createElement('br'), s]));
+        tip.style.left = Math.min(Math.max(cx / W * box.clientWidth, 70), box.clientWidth - 70) + 'px';
+        tip.style.top = (Math.min(y1, y0) / H * H - 6) + 'px';
+        tip.hidden = false;
+      };
+      const hide = () => { col.classList.remove('active'); tip.hidden = true; };
+      hit.addEventListener('mouseenter', show);
+      hit.addEventListener('mouseleave', hide);
+      hit.addEventListener('click', show);
+    });
+    box.innerHTML = '';
+    box.append(svg, tip);
+  }
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!$('asset-view').hidden) renderTrend(); }, 150); });
+
+  function setAssetCategory(c) {
+    $('a-category').value = c;
+    const isFx = c === '외화';
+    document.querySelectorAll('#asset-form .fx-only').forEach(el => el.hidden = !isFx);
+    document.querySelectorAll('#asset-form .loan-only').forEach(el => el.hidden = c !== '대출금');
+    $('a-hint').textContent = (ASSET_HINT[c] || '') + (c === '외화' || c === '부동산' ? '' : KEYWORD_HINT);
+    $('a-amount').placeholder = c === '대출금' ? '남은 대출금 (원)' : '평가금액 (원)';
+  }
+
+  function resetAssetForm() {
+    editingAssetId = null;
+    for (const id of ['a-name', 'a-amount', 'a-memo', 'a-keywords', 'a-fx', 'a-rate']) $(id).value = '';
+    $('a-currency').value = 'USD';
+    $('a-loan-rate').value = ''; $('a-method').value = '원리금균등'; $('a-maturity').value = '';
+    $('a-submit').textContent = '추가';
+    $('a-cancel').hidden = true;
+    $('asset-form-title').textContent = '자산 추가';
+    setAssetCategory($('a-category').value || ASSET_CATEGORIES[0]);
+  }
+
+  function startAssetEdit(a) {
+    editingAssetId = a.id;
+    $('asset-form-box').open = true;
+    setAssetCategory(a.category);
+    $('a-name').value = a.name;
+    $('a-amount').value = a.amount;
+    $('a-memo').value = a.memo || '';
+    $('a-keywords').value = a.keywords || '';
+    $('a-hint').textContent = `지금 금액(연결된 이체 포함)이 들어 있어요. 저장하면 오늘(${today()}) 기준 금액이 돼요. ` + (ASSET_HINT[a.category] || '');
+    $('a-currency').value = a.currency || 'USD';
+    $('a-loan-rate').value = a.rate || ''; $('a-method').value = a.method || '원리금균등'; $('a-maturity').value = a.maturity || '';
+    $('a-fx').value = a.fxAmount || '';
+    $('a-rate').value = a.fxRate || '';
+    $('a-submit').textContent = '수정';
+    $('a-cancel').hidden = false;
+    $('asset-form-title').textContent = '자산 수정';
+    renderAssets();
+    $('asset-form-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('a-amount').focus();
+  }
+
+  for (const c of ASSET_CATEGORIES) {
+    const o = document.createElement('option');
+    o.value = o.textContent = c;
+    $('a-category').append(o);
+  }
+  $('a-category').onchange = () => setAssetCategory($('a-category').value);
+  // 외화 금액 × 환율 → 원화 평가금액
+  const calcFx = () => {
+    const fx = Number($('a-fx').value), rate = Number($('a-rate').value);
+    if (fx > 0 && rate > 0) $('a-amount').value = Math.round(fx * rate);
+  };
+  $('a-fx').oninput = calcFx;
+  $('a-rate').oninput = calcFx;
+  $('a-cancel').onclick = () => { resetAssetForm(); renderAssets(); };
+
+  $('asset-form').onsubmit = ev => {
+    ev.preventDefault();
+    const category = $('a-category').value;
+    const name = $('a-name').value.trim();
+    const amount = Math.round(Number($('a-amount').value));
+    if (!name || !($('a-amount').value !== '' && amount >= 0)) return;
+    const isFx = category === '외화';
+    const data = normalizeAsset({
+      id: editingAssetId || newId(), category, name, amount, memo: $('a-memo').value.trim(), keywords: $('a-keywords').value.trim(), updatedAt: today(),
+      ...(category === '대출금' ? { rate: Number($('a-loan-rate').value), method: $('a-method').value, maturity: $('a-maturity').value } : {}),
+      ...(isFx ? { currency: $('a-currency').value, fxAmount: Number($('a-fx').value), fxRate: Number($('a-rate').value) } : {}),
+    });
+    if (!data) return;
+    const i = assets.findIndex(a => a.id === data.id);
+    if (i >= 0) assets[i] = data; else assets.push(data);
+    save();
+    resetAssetForm();
+    renderAssets();
+    toast(i >= 0 ? '자산을 수정했어요' : '자산을 추가했어요');
+  };
 
   function renderRules() {
     const keys = Object.keys(rules);
@@ -1321,9 +2467,9 @@
         tag.className = 'tag';
         tag.textContent = '제외';
       } else {
-        const [t, c] = String(cat).split(':');
+        const [t] = String(cat).split(':');
         tag.className = 'tag ' + t;
-        tag.textContent = c;
+        tag.textContent = catLabel(cat);
       }
       const del = document.createElement('button');
       del.className = 'del';
@@ -1339,6 +2485,7 @@
   const CAT_COLOR = {
     '식비': 'var(--s1)', '교통비': 'var(--s2)', '의류비': 'var(--s3)', '화장품': 'var(--s4)',
     '운동비': 'var(--s5)', '학습비': 'var(--s6)', '공과금': 'var(--s7)', '생활비': 'var(--s8)',
+    '여행비': 'var(--s9)', '대출이자': 'var(--s10)', '업무 관련': 'var(--s11)',
   };
   const openCats = new Set();
 
@@ -1443,28 +2590,7 @@
       li.append(row);
       rows[c.cat] = row;
 
-      if (openCats.has(c.cat)) {
-        const ul = document.createElement('ul');
-        ul.className = 'cat-items';
-        for (const e of c.items) {
-          const item = document.createElement('li');
-          item.title = '눌러서 수정';
-          const [, m, d] = e.date.split('-').map(Number);
-          const idate = document.createElement('span');
-          idate.className = 'idate';
-          idate.textContent = `${m}/${d}`;
-          const imemo = document.createElement('span');
-          imemo.className = 'imemo';
-          imemo.textContent = e.memo || '(메모 없음)';
-          const iamt = document.createElement('span');
-          iamt.className = 'iamt';
-          iamt.textContent = won(e.amount);
-          item.append(idate, imemo, iamt);
-          item.onclick = () => startEdit(e);
-          ul.append(item);
-        }
-        li.append(ul);
-      }
+      if (openCats.has(c.cat)) li.append(SUBCATS[c.cat] ? subItemList(c.cat, c.items, c.sum) : itemList(c.items));
       legend.append(li);
     }
 
@@ -1482,6 +2608,56 @@
     box.append(wrap);
   }
 
+  // 카테고리를 펼쳤을 때 보이는 세부내역 (금액 큰 순)
+  function itemList(items) {
+    const ul = document.createElement('ul');
+    ul.className = 'cat-items';
+    for (const e of items.slice().sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date))) {
+      const item = document.createElement('li');
+      item.title = '눌러서 수정';
+      const [, m, d] = e.date.split('-').map(Number);
+      const idate = document.createElement('span');
+      idate.className = 'idate';
+      idate.textContent = `${m}/${d}`;
+      const imemo = document.createElement('span');
+      imemo.className = 'imemo';
+      imemo.textContent = e.memo || '(메모 없음)';
+      const iamt = document.createElement('span');
+      iamt.className = 'iamt';
+      iamt.textContent = won(e.amount);
+      item.append(idate, imemo, iamt);
+      item.onclick = () => startEdit(e);
+      ul.append(item);
+    }
+    return ul;
+  }
+
+  // 세부항목별 소계(큰 순) → 그 안의 내역(큰 순)
+  function subItemList(cat, items, total) {
+    const box = document.createElement('div');
+    box.className = 'sub-groups';
+    const groups = {};
+    for (const e of items) (groups[e.sub || guessSub(cat, e.memo)] ||= []).push(e);
+    const subs = Object.entries(groups)
+      .map(([sub, list]) => ({ sub, list, sum: list.reduce((s, e) => s + e.amount, 0) }))
+      .sort((a, b) => b.sum - a.sum);
+    for (const g of subs) {
+      const head = document.createElement('div');
+      head.className = 'sub-head';
+      const l = document.createElement('span');
+      l.textContent = `${g.sub} `;
+      const meta = document.createElement('span');
+      meta.className = 'lpct';
+      meta.textContent = `${g.list.length}건 · ${Math.round(g.sum / total * 100)}%`;
+      l.append(meta);
+      const r = document.createElement('span');
+      r.textContent = won(g.sum);
+      head.append(l, r);
+      box.append(head, itemList(g.list));
+    }
+    return box;
+  }
+
   function toggleCat(cat) {
     if (openCats.has(cat)) openCats.delete(cat); else openCats.add(cat);
     render();
@@ -1492,15 +2668,33 @@
     const h = document.createElement('h3');
     h.textContent = title;
     box.append(h);
-    const byCat = {};
-    for (const e of monthly) if (e.type === t) byCat[e.category] = (byCat[e.category] || 0) + e.amount;
-    for (const [cat, amt] of Object.entries(byCat).sort((a, b) => b[1] - a[1])) {
-      const row = document.createElement('div');
-      row.className = 'cat-row';
+    const groups = {};
+    for (const e of monthly) if (e.type === t) (groups[e.category] ||= []).push(e);
+    const cats = Object.entries(groups)
+      .map(([cat, items]) => [cat, items.reduce((s, e) => s + e.amount, 0), items])
+      .sort((a, b) => b[1] - a[1]);
+    for (const [cat, amt, items] of cats) {
+      // 지출 카테고리와 이름이 겹치지 않게 종류를 붙여서 펼침 상태를 기억
+      const key = `${t}:${cat}`;
+      const open = openCats.has(key);
+      const wrap = document.createElement('div');
+      wrap.className = 'cat-row';
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'cat-toggle';
+      row.setAttribute('aria-expanded', open);
+      row.title = open ? '접기' : '눌러서 세부내역 보기';
+      row.onclick = () => toggleCat(key);
       const head = document.createElement('div');
       head.className = 'cat-head';
       const name = document.createElement('span');
-      name.textContent = cat;
+      const chev = document.createElement('span');
+      chev.className = 'chev';
+      chev.textContent = open ? '▾' : '▸';
+      const cnt = document.createElement('span');
+      cnt.className = 'pct';
+      cnt.textContent = `${items.length}건`;
+      name.append(chev, cat, cnt);
       const pct = document.createElement('span');
       pct.className = 'pct';
       pct.textContent = Math.round(amt / total * 100) + '%';
@@ -1514,7 +2708,9 @@
       fill.style.width = (amt / total * 100) + '%';
       bar.append(fill);
       row.append(head, bar);
-      box.append(row);
+      wrap.append(row);
+      if (open) wrap.append(itemList(items));
+      box.append(wrap);
     }
   }
 
@@ -1550,10 +2746,13 @@
         li.onclick = () => startEdit(e);
         const tag = document.createElement('span');
         tag.className = 'tag ' + e.type;
-        tag.textContent = e.category;
+        tag.textContent = e.sub || e.category;
+        if (e.sub) tag.title = `${e.category} · ${e.sub}`;
         const memo = document.createElement('span');
         memo.className = 'memo';
         memo.textContent = e.memo;
+        const la = e.assetId && assetById(e.assetId);
+        if (la) memo.textContent = (e.memo ? e.memo + ' ' : '') + `→ ${la.name}`;
         if (e.source) memo.title = e.source === 'card' ? '카드 내역에서 가져옴' : '통장 내역에서 가져옴';
         const amt = document.createElement('span');
         amt.className = 'amt ' + e.type;
@@ -1580,7 +2779,7 @@
 
   // ================= 백업 =================
   $('export').onclick = () => {
-    const blob = new Blob([JSON.stringify({ version: 2, entries, rules }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ version: 3, entries, rules, assets, settings }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `가계부-${today()}.json`;
@@ -1608,13 +2807,18 @@
     const have = new Set(entries.map(e => e.id));
     const add = clean.filter(e => !have.has(e.id));
     const fileRules = data && data.rules && typeof data.rules === 'object' && !Array.isArray(data.rules) ? data.rules : null;
+    const haveA = new Set(assets.map(a => a.id));
+    const addA = (data && Array.isArray(data.assets) ? data.assets : []).map(normalizeAsset).filter(a => a && !haveA.has(a.id));
     const ok = await ask({
       title: '백업 파일 가져오기',
-      message: `파일에 있는 내역 ${clean.length}개 중 아직 없는 ${add.length}개를 내 가계부에 더할까요?` + (fileRules ? '\n기억한 분류도 함께 가져와요.' : ''),
+      message: `파일에 있는 내역 ${clean.length}개 중 아직 없는 ${add.length}개를 내 가계부에 더할까요?`
+        + (addA.length ? `\n아직 없는 자산 ${addA.length}개도 더해요.` : '')
+        + (fileRules ? '\n기억한 분류도 함께 가져와요.' : ''),
       ok: '가져오기',
     });
     if (!ok) return;
     entries.push(...add);
+    assets.push(...addA);
     if (fileRules) rules = { ...fileRules, ...rules };
     save();
     const latest = add.map(e => e.date).sort().pop();
@@ -1664,6 +2868,7 @@
     $('app').hidden = false;
     showSync();
     render();
+    if (!$("household-view").hidden) loadHousehold(true);
   }
 
   async function loadData() {
@@ -1672,9 +2877,28 @@
       const d = await api('getData', token);
       entries = (d.entries || []).map(normalizeEntry).filter(Boolean);
       lastSaved = new Map(entries.map(e => [e.id, JSON.stringify(e)]));
+      // 예전 '기타' 수입은 '잡수입'으로 바뀌어요 — 시트에도 반영되도록 다시 저장
+      let migrated = false;
+      for (const e of d.entries || []) {
+        const oldIncome = e && e.type === 'income' && e.category === '기타';
+        const noSub = e && SUBCATS[e.category] && !e.sub;
+        if ((oldIncome || noSub) && lastSaved.has(String(e.id))) { lastSaved.set(String(e.id), 'migrate'); migrated = true; }
+      }
       rules = d.rules && typeof d.rules === 'object' ? d.rules : {};
       rulesJSON = JSON.stringify(rules);
+      for (const k in rules) {
+        const v = rules[k];
+        if (v === 'income:기타') rules[k] = 'income:잡수입';
+        else if (v && v.cat === 'income:기타') rules[k] = { ...v, cat: 'income:잡수입' };
+      }
+      if (JSON.stringify(rules) !== rulesJSON) migrated = true;
+      assets = (d.assets || []).map(normalizeAsset).filter(Boolean);
+      lastSavedAssets = new Map(assets.map(a => [a.id, JSON.stringify(a)]));
+      settings = d.settings && typeof d.settings === 'object' && !Array.isArray(d.settings) ? d.settings : {};
+      settingsJSON = JSON.stringify(settings);
       userName = d.name;
+      showOwnNames();
+      if (migrated) save();
       $('app-title').textContent = `${d.name}님의 가계부`;
       showApp();
     } catch (err) {
@@ -1720,7 +2944,11 @@
     storeSession();
     rememberName(res.name);
     if (needsResync && sameUser) { needsResync = false; await flush(); }
-    else { needsResync = false; entries = []; lastSaved = new Map(); }
+    else {
+      needsResync = false;
+      entries = []; lastSaved = new Map();
+      assets = []; lastSavedAssets = new Map();
+    }
     userName = res.name;
     await loadData();
     if (signup && gateMode === 'app') toast('가계부를 만들었어요');
@@ -1739,7 +2967,13 @@
     entries = [];
     lastSaved = new Map();
     rules = {};
+    assets = [];
+    lastSavedAssets = new Map();
+    settings = {};
+    settingsJSON = '{}';
+    household = null;
     closePreview();
+    resetAssetForm();
     showGate('login');
   };
 
@@ -1748,6 +2982,10 @@
     viewYear = now.getFullYear();
     viewMonth = now.getMonth() + 1;
     setSrc('card');
+    resetAssetForm();
+    let view = 'ledger';
+    try { const v = localStorage.getItem('budget-view'); if (v === 'assets' || v === 'household') view = v; } catch {}
+    setView(view);
     resetForm();
     if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(API_URL)) {
       return showGate('error', '서버 주소(API_URL)가 설정되지 않았어요. 코드의 API_URL에 Apps Script 웹 앱 주소를 넣어 주세요.');
